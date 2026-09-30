@@ -73,6 +73,16 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit tail <file> [-n N]` | ⬇️ Last N lines, backward block-seek reading |
 | `codex-kit wc <file>` | 🔢 Lines, words, chars, bytes |
 | `codex-kit diff <f1> <f2>` | ➕➖ Unified diff (plain) / structured change list (json) |
+| `codex-kit ps [name]` | 🧵 List processes, optional case-insensitive name filter |
+| `codex-kit kill <pid>` | 🔪 Kill a process by PID |
+| `codex-kit port <port>` | 🔌 Check if a TCP port is listening, and which process owns it |
+| `codex-kit read <file> --range 100:200` | 📖 Read a 1-based line range, streaming (no full-file load) |
+| `codex-kit run [--timeout N] <cmd...>` | ⏱️ Run any command with timeout, exit-code passthrough, decoded output |
+| `codex-kit which <cmd>` | 📍 Locate a command on PATH (+ version probe) |
+| `codex-kit archive <out.zip\|out.tar.gz> <inputs...>` | 📦 Create zip / tar.gz archives |
+| `codex-kit extract <archive> [-d dest]` | 📂 Extract zip / tar.gz (path-traversal safe) |
+| `codex-kit write <file> [--encoding gbk] [--append]` | 💾 Write stdin to a file with an explicit encoding |
+| `codex-kit hash <file> [-a md5\|sha256]` | #️⃣ Streaming file checksum |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 Escape hatch: run code with the **system** Python |
 
 ## 🤖 Agent Integration
@@ -88,7 +98,8 @@ Route system operations as follows:
 
 1. Content search: `rg "pattern" [dir]`. File finding: `fd "pattern" [dir]`.
 2. Directory & file operations via `codex-kit`:
-   `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff`.
+    `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
+    `ps` / `kill` / `port` / `run` / `which` / `write` / `hash` / `archive` / `extract`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

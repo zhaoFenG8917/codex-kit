@@ -51,14 +51,16 @@ pub fn decode_bytes(bytes: &[u8]) -> Decoded {
     }
     let mut detector = chardetng::EncodingDetector::new();
     detector.feed(bytes, true);
-    let guessed = detector.guess(None, true);
+    let guessed = detector.guess(locale_tld(), true);
     if guessed != UTF_8 {
-        let (text, _, _) = guessed.decode(bytes);
-        return Decoded {
-            text: text.into_owned(),
-            encoding: guessed,
-            bom: Vec::new(),
-        };
+        let (text, _, had_errors) = guessed.decode(bytes);
+        if !had_errors {
+            return Decoded {
+                text: text.into_owned(),
+                encoding: guessed,
+                bom: Vec::new(),
+            };
+        }
     }
     for enc in [GBK, GB18030, WINDOWS_1252] {
         let (text, _, had_errors) = enc.decode(bytes);
@@ -71,6 +73,22 @@ pub fn decode_bytes(bytes: &[u8]) -> Decoded {
         }
     }
     unreachable!()
+}
+
+/// Map the OS locale's region to a chardetng TLD hint. Short CJK texts are
+/// often ambiguous between GBK / Big5 / EUC-KR / Shift_JIS; the hint makes
+/// detection resolve to the encoding the user's system actually uses.
+fn locale_tld() -> Option<&'static [u8]> {
+    let loc = sys_locale::get_locale()?;
+    let region = loc.rsplit(['-', '_']).next()?.to_ascii_uppercase();
+    match region.as_str() {
+        "CN" => Some(b"cn"),
+        "TW" => Some(b"tw"),
+        "HK" | "MO" => Some(b"hk"),
+        "JP" => Some(b"jp"),
+        "KR" => Some(b"kr"),
+        _ => None,
+    }
 }
 
 /// Re-encode replacement text using the file's original encoding and BOM.

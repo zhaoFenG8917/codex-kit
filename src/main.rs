@@ -37,6 +37,16 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
         Commands::Tail { file, lines } => commands::head_tail::tail(file, *lines, format),
         Commands::Wc { file } => commands::wc::run(file, format),
         Commands::Diff { file1, file2 } => commands::diff::run(file1, file2, format),
+        Commands::Ps { name } => commands::ps::ps(name.as_deref(), format),
+        Commands::Kill { pid } => commands::ps::kill(*pid, format),
+        Commands::Port { port } => commands::port::run(*port, format),
+        Commands::Read { file, range } => commands::read::run(file, range, format),
+        Commands::Run { cmd, timeout } => commands::run::run(cmd, *timeout, format),
+        Commands::Which { command } => commands::which::run(command, format),
+        Commands::Archive { output, inputs } => commands::archive::archive(output, inputs, format),
+        Commands::Extract { archive, dest } => commands::archive::extract(archive, dest.as_deref(), format),
+        Commands::Write { file, encoding, append } => commands::write::run(file, encoding, *append, format),
+        Commands::Hash { file, algorithm } => commands::hash::run(file, algorithm, format),
         Commands::Exec { code, file } => commands::exec::run(code, *file),
     }
 }

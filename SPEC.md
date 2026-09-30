@@ -28,6 +28,14 @@
 | **安全文本替换** | **`codex-kit replace`** | 支持 dry-run，防止 LLM 误操作 |
 | **文件头尾读取** | **`codex-kit head/tail`** | 大文件安全读取，不卡顿 |
 | **文件统计与对比** | **`codex-kit wc/diff`** | 轻量级统计与差异对比 |
+| **进程管理** | **`codex-kit ps/kill`** | 进程列表查询与按 PID 结束进程 |
+| **端口探测** | **`codex-kit port`** | 检查 TCP 端口监听状态及占用进程 |
+| **行区间读取** | **`codex-kit read`** | 按行号范围流式读取，适合大文件局部查看 |
+| **命令执行** | **`codex-kit run`** | 带超时控制与退出码透传的任意命令执行 |
+| **命令定位** | **`codex-kit which`** | PATH 查找与版本探测（Windows 自动处理 PATHEXT） |
+| **归档压缩** | **`codex-kit archive/extract`** | zip / tar.gz 创建与解压（防路径穿越） |
+| **编码写入** | **`codex-kit write`** | 将 stdin 以指定编码（utf8/gbk/gb18030）写入文件 |
+| **文件校验** | **`codex-kit hash`** | 流式计算 md5 / sha256 校验和 |
 | **动态代码执行兜底** | **`codex-kit exec`** | 调用系统 Python 执行任意代码 |
 
 ## 4. 详细功能需求 (子命令设计)
@@ -86,6 +94,39 @@
   - `code`：Python 代码字符串。
   - `-f, --file`：将 `code` 参数视为 `.py` 文件路径。
 - **行为**：透传 stdout/stderr，并返回 Python 进程的退出码。
+
+### 4.10 `ps [name]` / `kill <pid>`
+- **功能**：`ps` 列出系统进程（可按名称不区分大小写过滤，按内存降序）；`kill` 按 PID 结束进程。
+- **JSON 输出**：`ps` 输出包含 `pid`, `name`, `exe`, `memory_bytes`, `started` 的数组；`kill` 输出 `{pid, name, killed}`。
+
+### 4.11 `port <port>`
+- **功能**：检查指定 TCP 端口是否在监听，并尽量报告占用进程的 PID 与名称（Windows 解析 `netstat -ano`，Unix 使用 `lsof`）。
+- **JSON 输出**：`{port, listening, pid, process_name}`。
+
+### 4.12 `read <file> --range <range>`
+- **功能**：按 1 起始的行号区间流式读取文件，跳过区间前、读完区间后即停止，不加载整个文件。
+- **range 格式**：`100:200`、`100:`（到文件尾）、`:200`（从开头）、`150`（单行）。
+- **JSON 输出**：`{file, encoding, start, end, lines[]}`。
+
+### 4.13 `run [--timeout N] <cmd...>`
+- **功能**：带超时（默认 30 秒）执行任意外部命令，stdout/stderr 在独立线程捕获（无管道死锁），输出自动解码。
+- **行为**：透传子进程退出码；超时返回 124。注意 `--timeout` 等选项须写在被执行命令之前。
+
+### 4.14 `which <command>`
+- **功能**：在 PATH 中定位命令（Windows 自动尝试 PATHEXT 扩展名），并探测 `--version`（2 秒超时）。
+- **JSON 输出**：`{command, found, path, version}`；未找到时报错并以非零码退出。
+
+### 4.15 `archive <output> <inputs...>` / `extract <archive> [-d dest]`
+- **功能**：按扩展名识别格式（`.zip` 或 `.tar.gz`/`.tgz`），创建或解压归档；输入可以是文件或目录（目录递归打包，以目录名为归档内根）。
+- **安全性**：解压时拒绝路径穿越条目（zip-slip）。
+
+### 4.16 `write <file>`
+- **功能**：将 stdin 内容以指定编码写入文件，解决 Agent 在 Windows 下无法可靠创建 GBK 文件的问题。
+- **参数**：`--encoding <utf8|gbk|gb18030>`（默认 utf8），`--append` 追加模式；自动创建缺失的父目录。
+
+### 4.17 `hash <file>`
+- **功能**：以 64KB 块流式计算文件校验和，大文件不占内存。
+- **参数**：`-a, --algorithm <sha256|md5>`，默认 sha256。
 
 ## 5. 技术实现细节
 

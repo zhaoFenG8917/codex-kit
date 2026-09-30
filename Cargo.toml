@@ -1,6 +1,6 @@
 [package]
 name = "codex-kit"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Cross-platform system-operation CLI toolkit for AI coding agents"
 license = "MIT"
@@ -16,11 +16,18 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 encoding_rs = "0.8"
 chardetng = "0.1"
+sys-locale = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 similar = "2"
 colored = "2"
 glob = "0.3"
 regex = "1"
+sysinfo = "0.33"
+zip = "2"
+tar = "0.4"
+flate2 = "1"
+sha2 = "0.10"
+md5 = "0.7"
 
 [profile.release]
 opt-level = 3

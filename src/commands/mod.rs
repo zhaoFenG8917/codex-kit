@@ -1,9 +1,17 @@
+pub mod archive;
 pub mod diff;
 pub mod exec;
+pub mod hash;
 pub mod head_tail;
 pub mod info;
 pub mod ls;
+pub mod port;
+pub mod ps;
+pub mod read;
 pub mod replace;
+pub mod run;
 pub mod stat;
 pub mod tree;
 pub mod wc;
+pub mod which;
+pub mod write;

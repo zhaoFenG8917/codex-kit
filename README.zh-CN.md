@@ -73,6 +73,16 @@ sudo mv codex-kit /usr/local/bin/
 | `codex-kit tail <file> [-n N]` | ⬇️ 读取后 N 行，从文件尾部反向分块读取 |
 | `codex-kit wc <file>` | 🔢 统计行数、词数、字符数、字节数 |
 | `codex-kit diff <f1> <f2>` | ➕➖ 文件对比（plain 输出 unified diff，json 输出结构化变更） |
+| `codex-kit ps [name]` | 🧵 进程列表，支持按名称模糊过滤 |
+| `codex-kit kill <pid>` | 🔪 按 PID 结束进程 |
+| `codex-kit port <port>` | 🔌 检查 TCP 端口是否在监听，以及被哪个进程占用 |
+| `codex-kit read <file> --range 100:200` | 📖 按 1 起始的行号区间流式读取，不加载整个文件 |
+| `codex-kit run [--timeout N] <cmd...>` | ⏱️ 带超时执行任意命令，透传退出码，自动解码输出 |
+| `codex-kit which <cmd>` | 📍 在 PATH 中定位命令（含版本探测） |
+| `codex-kit archive <out.zip\|out.tar.gz> <inputs...>` | 📦 创建 zip / tar.gz 压缩包 |
+| `codex-kit extract <archive> [-d dest]` | 📂 解压 zip / tar.gz（防路径穿越） |
+| `codex-kit write <file> [--encoding gbk] [--append]` | 💾 将 stdin 以指定编码写入文件 |
+| `codex-kit hash <file> [-a md5\|sha256]` | #️⃣ 流式计算文件校验和 |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 兜底通道：调用**系统** Python 执行代码 |
 
 ## 🤖 接入 Agent
@@ -88,7 +98,8 @@ Route system operations as follows:
 
 1. Content search: `rg "pattern" [dir]`. File finding: `fd "pattern" [dir]`.
 2. Directory & file operations via `codex-kit`:
-   `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff`.
+    `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
+    `ps` / `kill` / `port` / `run` / `which` / `write` / `hash` / `archive` / `extract`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

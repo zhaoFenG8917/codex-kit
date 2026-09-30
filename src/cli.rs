@@ -99,6 +99,78 @@ pub enum Commands {
         /// Second file
         file2: PathBuf,
     },
+    /// List processes, optionally filtered by name
+    Ps {
+        /// Process name filter (case-insensitive substring)
+        name: Option<String>,
+    },
+    /// Kill a process by PID
+    Kill {
+        /// Process ID
+        pid: u32,
+    },
+    /// Check if a TCP port is listening (and which process owns it)
+    Port {
+        /// Port number
+        port: u16,
+    },
+    /// Read a line range of a file, e.g. --range 100:200
+    Read {
+        /// Target file
+        file: PathBuf,
+        /// Line range, 1-based: "100:200", "100:", ":200", or single "150"
+        #[arg(long)]
+        range: String,
+    },
+    /// Run an external command with a timeout and capture the result
+    Run {
+        /// Timeout in seconds
+        #[arg(long, default_value_t = 30)]
+        timeout: u64,
+        /// The command and its arguments (put options like --timeout BEFORE the command)
+        #[arg(required = true, trailing_var_arg = true, allow_hyphen_values = true)]
+        cmd: Vec<String>,
+    },
+    /// Locate a command on PATH (and probe its version)
+    Which {
+        /// Command name
+        command: String,
+    },
+    /// Create an archive (.zip or .tar.gz) from files/directories
+    Archive {
+        /// Output archive path (.zip or .tar.gz/.tgz)
+        output: PathBuf,
+        /// Files/directories to pack
+        #[arg(required = true)]
+        inputs: Vec<PathBuf>,
+    },
+    /// Extract an archive (.zip or .tar.gz)
+    Extract {
+        /// Archive file (.zip or .tar.gz/.tgz)
+        archive: PathBuf,
+        /// Destination directory (default: current directory)
+        #[arg(short, long)]
+        dest: Option<PathBuf>,
+    },
+    /// Write stdin to a file with a specific encoding
+    Write {
+        /// Target file
+        file: PathBuf,
+        /// Encoding: utf8 (default), gbk, gb18030
+        #[arg(long, default_value = "utf8")]
+        encoding: String,
+        /// Append instead of overwrite
+        #[arg(long)]
+        append: bool,
+    },
+    /// Compute a file checksum
+    Hash {
+        /// Target file
+        file: PathBuf,
+        /// Algorithm: sha256 (default) or md5
+        #[arg(short = 'a', long, default_value = "sha256")]
+        algorithm: String,
+    },
     /// Run Python code with the system interpreter (fallback escape hatch)
     Exec {
         /// Python code string, or a .py file path with -f
