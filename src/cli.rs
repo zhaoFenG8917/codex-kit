@@ -34,6 +34,9 @@ pub enum Commands {
         /// Long listing format (size, modified time)
         #[arg(short, long)]
         long: bool,
+        /// Only show the first N entries
+        #[arg(long)]
+        limit: Option<usize>,
     },
     /// Show directory tree
     Tree {
@@ -103,6 +106,26 @@ pub enum Commands {
     Ps {
         /// Process name filter (case-insensitive substring)
         name: Option<String>,
+        /// Only show the top N processes (sorted by memory)
+        #[arg(long)]
+        limit: Option<usize>,
+    },
+    /// Make an HTTP request (cross-platform curl/Invoke-RestMethod alternative)
+    Http {
+        /// Request URL
+        url: String,
+        /// HTTP method
+        #[arg(short = 'X', long, default_value = "GET")]
+        method: String,
+        /// Header, repeatable: -H "Content-Type: application/json"
+        #[arg(short = 'H', long)]
+        header: Vec<String>,
+        /// Request body
+        #[arg(short = 'd', long)]
+        data: Option<String>,
+        /// Timeout in seconds
+        #[arg(long, default_value_t = 30)]
+        timeout: u64,
     },
     /// Kill a process by PID
     Kill {

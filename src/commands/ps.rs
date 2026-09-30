@@ -14,7 +14,7 @@ struct Proc {
     started: Option<String>,
 }
 
-pub fn ps(name: Option<&str>, format: Format) -> Result<()> {
+pub fn ps(name: Option<&str>, limit: Option<usize>, format: Format) -> Result<()> {
     let mut sys = System::new();
     sys.refresh_processes(ProcessesToUpdate::All, true);
     let needle = name.map(|n| n.to_lowercase());
@@ -37,6 +37,15 @@ pub fn ps(name: Option<&str>, format: Format) -> Result<()> {
         .collect();
     procs.sort_by(|a, b| b.memory_bytes.cmp(&a.memory_bytes));
 
+    let total = procs.len();
+    let truncated = match limit {
+        Some(n) if n < total => {
+            procs.truncate(n);
+            true
+        }
+        _ => false,
+    };
+
     match format {
         Format::Json => output::print_json(&procs),
         Format::Plain => {
@@ -49,6 +58,9 @@ pub fn ps(name: Option<&str>, format: Format) -> Result<()> {
                     truncate(&p.name, 30),
                     p.exe.as_deref().unwrap_or("-")
                 );
+            }
+            if truncated {
+                println!("... and {} more (of {total} total)", total - procs.len());
             }
         }
     }

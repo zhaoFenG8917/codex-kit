@@ -64,7 +64,7 @@ sudo mv codex-kit /usr/local/bin/
 
 | 命令 | 说明 |
 |---|---|
-| `codex-kit ls [path] [-a] [-l]` | 📄 列出目录内容 |
+| `codex-kit ls [path] [-a] [-l] [--limit N]` | 📄 列出目录内容（--limit 截断时 JSON 依然合法） |
 | `codex-kit tree [path] [-d N] [--ignore glob]` | 🌲 目录树，支持深度限制和忽略规则 |
 | `codex-kit info <path>` | 🔍 文件/目录元信息（类型、大小、时间戳、只读属性） |
 | `codex-kit stat` | 🖥️ 探测系统环境（OS、架构、PATH、python/node/git 版本） |
@@ -73,7 +73,7 @@ sudo mv codex-kit /usr/local/bin/
 | `codex-kit tail <file> [-n N]` | ⬇️ 读取后 N 行，从文件尾部反向分块读取 |
 | `codex-kit wc <file>` | 🔢 统计行数、词数、字符数、字节数 |
 | `codex-kit diff <f1> <f2>` | ➕➖ 文件对比（plain 输出 unified diff，json 输出结构化变更） |
-| `codex-kit ps [name]` | 🧵 进程列表，支持按名称模糊过滤 |
+| `codex-kit ps [name] [--limit N]` | 🧵 进程列表（按内存降序），支持名称过滤 / 取前 N 个 |
 | `codex-kit kill <pid>` | 🔪 按 PID 结束进程 |
 | `codex-kit port <port>` | 🔌 检查 TCP 端口是否在监听，以及被哪个进程占用 |
 | `codex-kit read <file> --range 100:200` | 📖 按 1 起始的行号区间流式读取，不加载整个文件 |
@@ -83,6 +83,7 @@ sudo mv codex-kit /usr/local/bin/
 | `codex-kit extract <archive> [-d dest]` | 📂 解压 zip / tar.gz（防路径穿越） |
 | `codex-kit write <file> [--encoding gbk] [--append]` | 💾 将 stdin 以指定编码写入文件 |
 | `codex-kit hash <file> [-a md5\|sha256]` | #️⃣ 流式计算文件校验和 |
+| `codex-kit http <url> [-X M] [-H 'k: v'] [-d body] [--timeout N]` | 🌐 发 HTTP 请求——任何状态码都视为数据（退出码 0），仅传输层失败才非零 |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 兜底通道：调用**系统** Python 执行代码 |
 
 ## 🤖 接入 Agent
@@ -99,7 +100,7 @@ Route system operations as follows:
 1. Content search: `rg "pattern" [dir]`. File finding: `fd "pattern" [dir]`.
 2. Directory & file operations via `codex-kit`:
     `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
-    `ps` / `kill` / `port` / `run` / `which` / `write` / `hash` / `archive` / `extract`.
+    `ps` / `kill` / `port` / `run` / `which` / `write` / `hash` / `archive` / `extract` / `http`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

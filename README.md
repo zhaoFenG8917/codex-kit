@@ -64,7 +64,7 @@ Global flag: `--format plain|json` (default: `plain`).
 
 | Command | Description |
 |---|---|
-| `codex-kit ls [path] [-a] [-l]` | 📄 List directory contents |
+| `codex-kit ls [path] [-a] [-l] [--limit N]` | 📄 List directory contents (--limit keeps JSON valid when truncating) |
 | `codex-kit tree [path] [-d N] [--ignore glob]` | 🌲 Directory tree with depth limit and ignore globs |
 | `codex-kit info <path>` | 🔍 File/dir metadata (type, size, timestamps, readonly) |
 | `codex-kit stat` | 🖥️ Probe OS, arch, hostname, PATH, python/node/git versions |
@@ -73,7 +73,7 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit tail <file> [-n N]` | ⬇️ Last N lines, backward block-seek reading |
 | `codex-kit wc <file>` | 🔢 Lines, words, chars, bytes |
 | `codex-kit diff <f1> <f2>` | ➕➖ Unified diff (plain) / structured change list (json) |
-| `codex-kit ps [name]` | 🧵 List processes, optional case-insensitive name filter |
+| `codex-kit ps [name] [--limit N]` | 🧵 List processes (sorted by memory), optional name filter / top-N |
 | `codex-kit kill <pid>` | 🔪 Kill a process by PID |
 | `codex-kit port <port>` | 🔌 Check if a TCP port is listening, and which process owns it |
 | `codex-kit read <file> --range 100:200` | 📖 Read a 1-based line range, streaming (no full-file load) |
@@ -83,6 +83,7 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit extract <archive> [-d dest]` | 📂 Extract zip / tar.gz (path-traversal safe) |
 | `codex-kit write <file> [--encoding gbk] [--append]` | 💾 Write stdin to a file with an explicit encoding |
 | `codex-kit hash <file> [-a md5\|sha256]` | #️⃣ Streaming file checksum |
+| `codex-kit http <url> [-X M] [-H 'k: v'] [-d body] [--timeout N]` | 🌐 HTTP requests — any status is data (exit 0), only transport errors exit non-zero |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 Escape hatch: run code with the **system** Python |
 
 ## 🤖 Agent Integration
@@ -99,7 +100,7 @@ Route system operations as follows:
 1. Content search: `rg "pattern" [dir]`. File finding: `fd "pattern" [dir]`.
 2. Directory & file operations via `codex-kit`:
     `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
-    `ps` / `kill` / `port` / `run` / `which` / `write` / `hash` / `archive` / `extract`.
+    `ps` / `kill` / `port` / `run` / `which` / `write` / `hash` / `archive` / `extract` / `http`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

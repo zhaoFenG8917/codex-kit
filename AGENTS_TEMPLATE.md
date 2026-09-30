@@ -6,7 +6,7 @@ Route system operations as follows:
 1. Content search: `rg "pattern" [dir]`. File finding: `fd "pattern" [dir]`.
 2. Directory & file operations via `codex-kit`:
     `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
-    `ps` / `kill` / `port` / `run` / `which` / `write` / `hash` / `archive` / `extract`.
+    `ps` / `kill` / `port` / `run` / `which` / `write` / `hash` / `archive` / `extract` / `http`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

@@ -3,6 +3,7 @@ pub mod diff;
 pub mod exec;
 pub mod hash;
 pub mod head_tail;
+pub mod http;
 pub mod info;
 pub mod ls;
 pub mod port;

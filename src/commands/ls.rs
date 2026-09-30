@@ -17,7 +17,21 @@ struct Entry {
     hidden: bool,
 }
 
-pub fn run(path: Option<&Path>, all: bool, long: bool, format: Format) -> Result<()> {
+#[derive(Serialize)]
+struct LimitedListing {
+    entries: Vec<Entry>,
+    total: usize,
+    returned: usize,
+    truncated: bool,
+}
+
+pub fn run(
+    path: Option<&Path>,
+    all: bool,
+    long: bool,
+    limit: Option<usize>,
+    format: Format,
+) -> Result<()> {
     let dir = path.unwrap_or_else(|| Path::new("."));
     let read_dir = fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
 
@@ -48,8 +62,30 @@ pub fn run(path: Option<&Path>, all: bool, long: bool, format: Format) -> Result
     }
     entries.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
+    let total = entries.len();
+    let truncated = match limit {
+        Some(n) if n < total => {
+            entries.truncate(n);
+            true
+        }
+        _ => false,
+    };
+
     match format {
-        Format::Json => output::print_json(&entries),
+        Format::Json => {
+            if limit.is_some() {
+                // Keep the JSON valid after truncation and tell the caller
+                // how much was hidden.
+                output::print_json(&LimitedListing {
+                    returned: entries.len(),
+                    total,
+                    truncated,
+                    entries,
+                });
+            } else {
+                output::print_json(&entries);
+            }
+        }
         Format::Plain => {
             for e in &entries {
                 let name = match e.kind.as_str() {
@@ -62,6 +98,9 @@ pub fn run(path: Option<&Path>, all: bool, long: bool, format: Format) -> Result
                 } else {
                     println!("{name}");
                 }
+            }
+            if truncated {
+                println!("... and {} more (of {total} total)", total - entries.len());
             }
         }
     }

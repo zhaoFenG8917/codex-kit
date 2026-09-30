@@ -36,6 +36,7 @@
 | **归档压缩** | **`codex-kit archive/extract`** | zip / tar.gz 创建与解压（防路径穿越） |
 | **编码写入** | **`codex-kit write`** | 将 stdin 以指定编码（utf8/gbk/gb18030）写入文件 |
 | **文件校验** | **`codex-kit hash`** | 流式计算 md5 / sha256 校验和 |
+| **HTTP 请求** | **`codex-kit http`** | 跨平台替代 curl/Invoke-RestMethod，状态码视为数据 |
 | **动态代码执行兜底** | **`codex-kit exec`** | 调用系统 Python 执行任意代码 |
 
 ## 4. 详细功能需求 (子命令设计)
@@ -50,7 +51,8 @@
   - `path`：目录路径，默认 `.`。
   - `-a, --all`：显示隐藏文件。
   - `-l, --long`：显示详细信息（权限、大小、修改时间）。
-- **JSON 输出**：包含 `name`, `type` (file/dir/symlink), `size`, `modified` 等字段的数组。
+  - `--limit <N>`：只输出前 N 个条目。
+- **JSON 输出**：包含 `name`, `type` (file/dir/symlink), `size`, `modified` 等字段的数组；指定 `--limit` 时输出 `{entries, total, returned, truncated}`，截断后 JSON 依然合法。
 
 ### 4.2 `tree [path]`
 - **功能**：以树状图展示目录结构。
@@ -97,6 +99,7 @@
 
 ### 4.10 `ps [name]` / `kill <pid>`
 - **功能**：`ps` 列出系统进程（可按名称不区分大小写过滤，按内存降序）；`kill` 按 PID 结束进程。
+- **参数**：`ps` 支持 `--limit <N>` 只取内存占用前 N 个进程。
 - **JSON 输出**：`ps` 输出包含 `pid`, `name`, `exe`, `memory_bytes`, `started` 的数组；`kill` 输出 `{pid, name, killed}`。
 
 ### 4.11 `port <port>`
@@ -127,6 +130,16 @@
 ### 4.17 `hash <file>`
 - **功能**：以 64KB 块流式计算文件校验和，大文件不占内存。
 - **参数**：`-a, --algorithm <sha256|md5>`，默认 sha256。
+
+### 4.18 `http <url>`
+- **功能**：跨平台 HTTP 客户端，替代 curl / Invoke-RestMethod / Invoke-WebRequest，避免 PowerShell 语法差异与别名陷阱。
+- **参数**：
+  - `-X, --method <M>`：HTTP 方法，默认 GET。
+  - `-H, --header <"Name: value">`：请求头，可重复。
+  - `-d, --data <body>`：请求体。
+  - `--timeout <N>`：超时秒数，默认 30。
+- **行为**：收到任何 HTTP 响应（含 4xx/5xx）都以退出码 0 返回，状态码作为数据输出；仅传输层失败（DNS、连接拒绝、超时）返回非零。响应体按服务器 charset 头解码（GBK 安全）。
+- **JSON 输出**：`{url, method, status, duration_ms, headers{}, body}`。
 
 ## 5. 技术实现细节
 

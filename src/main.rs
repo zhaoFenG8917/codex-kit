@@ -19,7 +19,9 @@ fn main() {
 
 fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
     match cmd {
-        Commands::Ls { path, all, long } => commands::ls::run(path.as_deref(), *all, *long, format),
+        Commands::Ls { path, all, long, limit } => {
+            commands::ls::run(path.as_deref(), *all, *long, *limit, format)
+        }
         Commands::Tree { path, depth, ignore } => {
             commands::tree::run(path.as_deref(), *depth, ignore, format)
         }
@@ -37,7 +39,14 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
         Commands::Tail { file, lines } => commands::head_tail::tail(file, *lines, format),
         Commands::Wc { file } => commands::wc::run(file, format),
         Commands::Diff { file1, file2 } => commands::diff::run(file1, file2, format),
-        Commands::Ps { name } => commands::ps::ps(name.as_deref(), format),
+        Commands::Ps { name, limit } => commands::ps::ps(name.as_deref(), *limit, format),
+        Commands::Http {
+            url,
+            method,
+            header,
+            data,
+            timeout,
+        } => commands::http::run(url, method, header, data.as_deref(), *timeout, format),
         Commands::Kill { pid } => commands::ps::kill(*pid, format),
         Commands::Port { port } => commands::port::run(*port, format),
         Commands::Read { file, range } => commands::read::run(file, range, format),
