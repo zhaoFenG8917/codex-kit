@@ -10,6 +10,8 @@
 
 Single binary · Zero dependencies · Windows / Linux / macOS · JSON-native output
 
+English | [简体中文](README.zh-CN.md)
+
 </div>
 
 ---
