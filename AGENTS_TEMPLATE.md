@@ -13,3 +13,6 @@ Route system operations as follows:
 5. Escape hatch: `codex-kit exec "python_code"` runs the **system** Python.
    Never use a project's virtualenv interpreter for system operations.
 6. Append `--format json` whenever you need to parse the output.
+7. The command list above may lag the installed version. Run `codex-kit --help`
+   (or `codex-kit <command> --help`) to discover the actual commands and flags —
+   trust the `--help` output over this list.
