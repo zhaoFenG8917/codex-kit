@@ -78,6 +78,7 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit port <port>` | 🔌 Check if a TCP port is listening, and which process owns it |
 | `codex-kit read <file> --range 100:200` | 📖 Read a 1-based line range, streaming (no full-file load) |
 | `codex-kit run [--timeout N] <cmd...>` | ⏱️ Run any command with timeout, exit-code passthrough, decoded output |
+| `codex-kit start [--wait-port P] [--cwd d] [--log f] <cmd...>` | 🚀 Launch a detached background service — survives the session, logs to file, optionally waits for its port |
 | `codex-kit which <cmd>` | 📍 Locate a command on PATH (+ version probe) |
 | `codex-kit archive <out.zip\|out.tar.gz> <inputs...>` | 📦 Create zip / tar.gz archives |
 | `codex-kit extract <archive> [-d dest]` | 📂 Extract zip / tar.gz (path-traversal safe) |
@@ -100,7 +101,7 @@ Route system operations as follows:
 1. Content search: `rg "pattern" [dir]`. File finding: `fd "pattern" [dir]`.
 2. Directory & file operations via `codex-kit`:
     `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
-    `ps` / `kill` / `port` / `run` / `which` / `write` / `hash` / `archive` / `extract` / `http`.
+    `ps` / `kill` / `port` / `run` / `start` / `which` / `write` / `hash` / `archive` / `extract` / `http`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

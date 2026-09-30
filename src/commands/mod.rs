@@ -11,6 +11,7 @@ pub mod ps;
 pub mod read;
 pub mod replace;
 pub mod run;
+pub mod start;
 pub mod stat;
 pub mod tree;
 pub mod wc;

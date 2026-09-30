@@ -154,6 +154,27 @@ pub enum Commands {
         #[arg(required = true, trailing_var_arg = true, allow_hyphen_values = true)]
         cmd: Vec<String>,
     },
+    /// Start a detached background service (daemon) that survives this session
+    Start {
+        /// Label used for the default log file name
+        #[arg(long)]
+        name: Option<String>,
+        /// Working directory for the service
+        #[arg(long)]
+        cwd: Option<PathBuf>,
+        /// Log file path (default: temp dir, auto-named)
+        #[arg(long)]
+        log: Option<PathBuf>,
+        /// Wait until this TCP port is listening before returning
+        #[arg(long)]
+        wait_port: Option<u16>,
+        /// Timeout in seconds for --wait-port
+        #[arg(long, default_value_t = 60)]
+        wait_timeout: u64,
+        /// The command and its arguments (put options BEFORE the command)
+        #[arg(required = true, trailing_var_arg = true, allow_hyphen_values = true)]
+        cmd: Vec<String>,
+    },
     /// Locate a command on PATH (and probe its version)
     Which {
         /// Command name

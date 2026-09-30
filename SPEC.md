@@ -32,6 +32,7 @@
 | **端口探测** | **`codex-kit port`** | 检查 TCP 端口监听状态及占用进程 |
 | **行区间读取** | **`codex-kit read`** | 按行号范围流式读取，适合大文件局部查看 |
 | **命令执行** | **`codex-kit run`** | 带超时控制与退出码透传的任意命令执行 |
+| **后台服务** | **`codex-kit start`** | 脱离会话拉起长驻进程，日志落盘，可等端口就绪 |
 | **命令定位** | **`codex-kit which`** | PATH 查找与版本探测（Windows 自动处理 PATHEXT） |
 | **归档压缩** | **`codex-kit archive/extract`** | zip / tar.gz 创建与解压（防路径穿越） |
 | **编码写入** | **`codex-kit write`** | 将 stdin 以指定编码（utf8/gbk/gb18030）写入文件 |
@@ -140,6 +141,20 @@
   - `--timeout <N>`：超时秒数，默认 30。
 - **行为**：收到任何 HTTP 响应（含 4xx/5xx）都以退出码 0 返回，状态码作为数据输出；仅传输层失败（DNS、连接拒绝、超时）返回非零。响应体按服务器 charset 头解码（GBK 安全）。
 - **JSON 输出**：`{url, method, status, duration_ms, headers{}, body}`。
+
+### 4.19 `start <cmd...>`
+- **功能**：以后台守护方式拉起长驻服务进程，替代 `Start-Process -WindowStyle Hidden` / `nohup ... &`。进程脱离调用方会话独立存活（Windows 无控制台窗口、独立进程组；Unix 独立进程组防 SIGHUP）。
+- **参数**：
+  - `--name <label>`：服务标签，用于默认日志文件名。
+  - `--cwd <dir>`：服务的工作目录。
+  - `--log <file>`：日志文件路径（默认：临时目录下自动命名），stdout/stderr 均追加写入。
+  - `--wait-port <port>`：启动后等待该 TCP 端口开始监听再返回。
+  - `--wait-timeout <N>`：`--wait-port` 的等待秒数，默认 60。
+- **行为**：
+  - 启动即返回 `{pid, name, cmd, log, detached, wait_port, ready}`；不持有子进程。
+  - `--wait-port` 等待期间若进程提前退出，报错并提示日志路径；超时未监听则 `ready=false`（进程仍在运行），退出码仍为 0，由调用方检查 `ready` 字段。
+  - Windows 下 spawn 前会临时摘除自身 std 句柄的继承标志，防止守护进程持有调用方管道导致调用方永远读不到 EOF（句柄泄漏挂起）。
+- **配套**：停止用 `codex-kit kill <pid>`，状态用 `codex-kit port <port>`，排障用 `codex-kit tail <log>`。
 
 ## 5. 技术实现细节
 
