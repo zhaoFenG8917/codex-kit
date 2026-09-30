@@ -78,7 +78,7 @@
 
 ### 4.8 `diff <file1> <file2>`
 - **功能**：对比两个文件的差异。
-- **输出**：Plain 模式输出带颜色的 unified diff；JSON 模式输出结构化的变更块（hunks）。
+- **输出**：Plain 模式输出带颜色的 unified diff；JSON 模式输出结构化的变更列表（含操作类型与行号）。
 
 ### 4.9 `exec <code>`
 - **功能**：兜底命令。调用系统级 Python 执行动态代码，用于处理预定义命令无法满足的复杂逻辑。
@@ -90,6 +90,7 @@
 ## 5. 技术实现细节
 
 ### 5.1 依赖库选型 (Cargo.toml)
+
 ```toml
 [dependencies]
 clap = { version = "4", features = ["derive"] }
@@ -97,33 +98,44 @@ walkdir = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 encoding_rs = "0.8"
+chardetng = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 similar = "2"
 colored = "2"
 glob = "0.3"
 regex = "1"
+```
 
-5.2 多编码自适应读取策略 (核心难点)
+### 5.2 多编码自适应读取策略 (核心难点)
+
 Windows 下存在大量 GBK/GB2312 编码文件。读取文件内容时，必须实现以下降级策略：
-尝试以 UTF-8 读取，若无 BOM 且无解码错误，则成功。
-若 UTF-8 失败，使用 chardet 逻辑或直接尝试 GBK (通过 encoding_rs::GBK)。
-若 GBK 失败，尝试 GB18030。
-最终兜底使用 WINDOWS_1252 (Latin-1)，确保不会抛出解码异常。
-5.3 错误处理规范
-所有业务错误必须输出到 stderr，格式为：Error: <message>。
-当 --format json 时，如果发生错误，stdout 应输出 {"error": "<message>"}，且进程退出码非 0。
-严禁将错误信息输出到 stdout，以免破坏 JSON 解析。
 
+1. 尝试以 UTF-8 读取，若无 BOM 且无解码错误，则成功。
+2. 若 UTF-8 失败，使用 chardetng 检测编码，或直接尝试 GBK（通过 `encoding_rs::GBK`）。
+3. 若 GBK 失败，尝试 GB18030。
+4. 最终兜底使用 WINDOWS_1252 (Latin-1)，确保不会抛出解码异常。
+5. 写回文件时（如 `replace`）必须按原编码重新编码，并保留原始 BOM，避免改变文件编码。
 
-6. 项目目录结构
-text
+### 5.3 错误处理规范
 
-编辑
+- 所有业务错误必须输出到 stderr，格式为：`Error: <message>`。
+- 当 `--format json` 时，如果发生错误，stdout 应输出 `{"error": "<message>"}`，且进程退出码非 0。
+- 严禁将错误信息输出到 stdout（plain 模式），以免破坏 JSON 解析。
 
+## 6. 项目目录结构
+
+```text
 codex-kit/
 ├── Cargo.toml
+├── Cargo.lock
 ├── SPEC.md               # 本文件
-├── README.md             # 用户文档
+├── README.md             # 用户文档（英文）
+├── README.zh-CN.md       # 用户文档（中文）
+├── LICENSE
+├── AGENTS_TEMPLATE.md    # Agent 集成模板
+├── .github/
+│   └── workflows/
+│       └── release.yml   # 三平台 CI/CD
 ├── src/
 │   ├── main.rs           # CLI 入口，Clap 路由
 │   ├── cli.rs            # Clap 结构体定义
@@ -142,28 +154,37 @@ codex-kit/
 │       ├── mod.rs
 │       ├── encoding.rs   # 多编码读取
 │       └── output.rs     # Plain/JSON 输出格式化器
+```
 
+## 7. 构建与发布
 
-7. 构建与发布
-
+```bash
 # 开发阶段
 cargo run -- ls .
 
 # 生产构建 (Windows)
 cargo build --release
 # 产物位于 target/release/codex-kit.exe
+```
 
-# 生产构建 (跨平台优化)
-# 在 Cargo.toml 中配置：
-# [profile.release]
-# opt-level = 3
-# lto = true
-# strip = true
-# codegen-units = 1
+跨平台优化在 Cargo.toml 中配置：
 
-AGENTS.md
+```toml
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+codegen-units = 1
+```
+
+发布由 GitHub Actions 自动完成（见 `.github/workflows/release.yml`）：推送 `v*` 格式的 tag 即触发 Windows / Linux / macOS 三平台构建，并自动创建 Release 上传产物。
+
+## 8. AGENTS.md 集成
+
+将以下路由规则加入 `~/.codex/AGENTS.md`（全局生效）或项目根目录的 `AGENTS.md`（项目级），Agent 即会自动把系统操作路由到 codex-kit。仓库中的 `AGENTS_TEMPLATE.md` 为可直接使用的英文模板。
 
 ### 系统工具与环境说明
+
 当前环境已安装 `codex-kit` 跨平台工具集，以及 `rg` (ripgrep) 和 `fd`。
 在执行系统操作时，请严格遵守以下路由规则：
 
@@ -180,11 +201,12 @@ AGENTS.md
 5. **禁止事项**：不要使用 PowerShell 原生的 `dir`, `ls`, `Select-String`，不要使用 `cat` 读取大文件，不要试图使用项目虚拟环境执行系统操作。
 6. **输出解析**：对于复杂结果，请在命令后追加 `--format json` 以获取结构化数据。
 
-
 ---
 
-### 给你的额外建议：
+## 附录：实施过程回顾
 
-1. **先让 Agent 搭骨架**：Agent 读完这个文档后，让它先只生成 `Cargo.toml`、`src/main.rs` (包含所有 clap 定义) 和 `src/utils/`。你运行 `cargo check` 确认没报错，再让它写具体的 `commands` 实现。
-2. **重点关注 `encoding.rs`**：这是 Windows 下最容易踩坑的地方，让 Agent 写完后，你一定要找个 GBK 编码的中文文件实际测一下 `codex-kit head <gbk_file>`。
-3. **关于 `exec` 命令**：这是整个工具的"灵魂兜底"。如果 Agent 遇到它不知道怎么处理的复杂系统操作，它可以自己用 `codex-kit exec "..."` 写一段 Python 来解决，这就让你的工具集具备了**图灵完备性**。
+本项目由 AI Agent 按以下流程实现，已被验证有效：
+
+1. **先搭骨架**：先生成 `Cargo.toml`、`src/main.rs`（包含所有 clap 定义）和 `src/utils/`，`cargo check` 通过后再实现各 `commands`。
+2. **重点验收 `encoding.rs`**：这是 Windows 下最容易踩坑的地方——用 GBK 编码的中文文件实测 `codex-kit head <gbk_file>` 与 `replace` 写回。本项目验收已通过：GBK 文件正确识别、替换后文件编码保持不变。
+3. **`exec` 是灵魂兜底**：当 Agent 遇到预定义命令无法处理的复杂系统操作时，可用 `codex-kit exec "..."` 调用系统 Python 解决，这让工具集具备了图灵完备性。
