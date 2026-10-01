@@ -2,35 +2,60 @@ use crate::cli::Format;
 use crate::utils::output;
 use crate::utils::Result;
 use serde::Serialize;
-use std::net::{SocketAddr, TcpStream};
+use std::net::{IpAddr, SocketAddr, TcpStream, ToSocketAddrs};
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use sysinfo::{Pid, ProcessesToUpdate, System};
 
 #[derive(Serialize)]
 struct PortResult {
+    host: String,
     port: u16,
     listening: bool,
+    latency_ms: Option<u128>,
     pid: Option<u32>,
     process_name: Option<String>,
 }
 
-pub fn run(port: u16, format: Format) -> Result<()> {
-    let addr: SocketAddr = format!("127.0.0.1:{port}").parse()?;
-    let listening = TcpStream::connect_timeout(&addr, Duration::from_millis(600)).is_ok();
-    let pid = if listening { find_owner_pid(port) } else { None };
+pub fn run(port: u16, host: Option<&str>, timeout_ms: u64, format: Format) -> Result<()> {
+    let host = host.unwrap_or("127.0.0.1");
+    let local = matches!(host, "127.0.0.1" | "localhost" | "::1");
+    let addr = resolve(host, port)?;
+
+    let started = Instant::now();
+    let listening =
+        TcpStream::connect_timeout(&addr, Duration::from_millis(timeout_ms)).is_ok();
+    let latency_ms = listening.then(|| started.elapsed().as_millis());
+
+    // Owner detection only makes sense on the local machine.
+    let pid = if local && listening {
+        find_owner_pid(port)
+    } else {
+        None
+    };
     let process_name = pid.and_then(process_name_of);
 
     let result = PortResult {
+        host: host.to_string(),
         port,
         listening,
+        latency_ms,
         pid,
         process_name,
     };
     match format {
         Format::Json => output::print_json(&result),
         Format::Plain => {
-            if result.listening {
+            if !local {
+                if result.listening {
+                    println!(
+                        "{host}:{port} reachable in {} ms",
+                        latency_ms.unwrap_or_default()
+                    );
+                } else {
+                    println!("{host}:{port} unreachable (timeout {timeout_ms} ms)");
+                }
+            } else if result.listening {
                 match (result.pid, &result.process_name) {
                     (Some(pid), Some(name)) => {
                         println!("port {port}: LISTENING, owned by {name} (pid {pid})")
@@ -43,6 +68,16 @@ pub fn run(port: u16, format: Format) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn resolve(host: &str, port: u16) -> Result<SocketAddr> {
+    if let Ok(ip) = host.parse::<IpAddr>() {
+        return Ok(SocketAddr::new(ip, port));
+    }
+    (host, port)
+        .to_socket_addrs()?
+        .next()
+        .ok_or_else(|| format!("could not resolve host '{host}'").into())
 }
 
 #[cfg(windows)]

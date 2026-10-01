@@ -75,7 +75,7 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit diff <f1> <f2>` | ➕➖ Unified diff (plain) / structured change list (json) |
 | `codex-kit ps [name] [--limit N]` | 🧵 List processes (sorted by memory), optional name filter / top-N |
 | `codex-kit kill <pid>` | 🔪 Kill a process by PID |
-| `codex-kit port <port>` | 🔌 Check if a TCP port is listening, and which process owns it |
+| `codex-kit port <port> [--host h] [--timeout ms]` | 🔌 Check a local port (incl. owner process) or a remote host:port reachability with latency |
 | `codex-kit read <file> --range 100:200` | 📖 Read a 1-based line range, streaming (no full-file load) |
 | `codex-kit run [--timeout N] <cmd...>` | ⏱️ Run any command with timeout, exit-code passthrough, decoded output |
 | `codex-kit start [--wait-port P] [--cwd d] [--log f] <cmd...>` | 🚀 Launch a detached background service — survives the session, logs to file, optionally waits for its port |
@@ -85,6 +85,9 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit write <file> [--encoding gbk] [--append]` | 💾 Write stdin to a file with an explicit encoding |
 | `codex-kit hash <file> [-a md5\|sha256]` | #️⃣ Streaming file checksum |
 | `codex-kit http <url> [-X M] [-H 'k: v'] [-d body] [--timeout N]` | 🌐 HTTP requests — any status is data (exit 0), only transport errors exit non-zero |
+| `codex-kit rm <paths...> [--force] [--dry-run]` | 🗑️ Safe delete — moves to trash by default, permanent only with `--force` |
+| `codex-kit trash [--empty]` | 🧺 List trash contents / empty it |
+| `codex-kit restore <ids...> [--all] [--overwrite]` | ♻️ Restore trashed items to their original paths |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 Escape hatch: run code with the **system** Python |
 
 ## 🤖 Agent Integration
@@ -101,7 +104,8 @@ Route system operations as follows:
 1. Content search: `rg "pattern" [dir]`. File finding: `fd "pattern" [dir]`.
 2. Directory & file operations via `codex-kit`:
     `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
-    `ps` / `kill` / `port` / `run` / `start` / `which` / `write` / `hash` / `archive` / `extract` / `http`.
+    `ps` / `kill` / `port` / `run` / `start` / `which` / `write` / `hash` / `archive` / `extract` /
+    `http` / `rm` / `trash` / `restore`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

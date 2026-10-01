@@ -1,6 +1,6 @@
 [package]
 name = "codex-kit"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 description = "Cross-platform system-operation CLI toolkit for AI coding agents"
 license = "MIT"

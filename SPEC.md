@@ -38,6 +38,7 @@
 | **编码写入** | **`codex-kit write`** | 将 stdin 以指定编码（utf8/gbk/gb18030）写入文件 |
 | **文件校验** | **`codex-kit hash`** | 流式计算 md5 / sha256 校验和 |
 | **HTTP 请求** | **`codex-kit http`** | 跨平台替代 curl/Invoke-RestMethod，状态码视为数据 |
+| **安全删除** | **`codex-kit rm/trash/restore`** | 默认移入回收站可还原，替代 Remove-Item/rm -rf |
 | **动态代码执行兜底** | **`codex-kit exec`** | 调用系统 Python 执行任意代码 |
 
 ## 4. 详细功能需求 (子命令设计)
@@ -104,8 +105,11 @@
 - **JSON 输出**：`ps` 输出包含 `pid`, `name`, `exe`, `memory_bytes`, `started` 的数组；`kill` 输出 `{pid, name, killed}`。
 
 ### 4.11 `port <port>`
-- **功能**：检查指定 TCP 端口是否在监听，并尽量报告占用进程的 PID 与名称（Windows 解析 `netstat -ano`，Unix 使用 `lsof`）。
-- **JSON 输出**：`{port, listening, pid, process_name}`。
+- **功能**：检查 TCP 端口。本机（默认 127.0.0.1）报告监听状态与占用进程（Windows 解析 `netstat -ano`，Unix 使用 `lsof`）；指定远程主机时探测连通性并测量握手延迟，替代 `Test-NetConnection`。
+- **参数**：
+  - `--host <主机>`：目标主机（IP 或域名，自动 DNS 解析），默认 127.0.0.1。
+  - `--timeout <ms>`：连接超时毫秒数，默认 1000。
+- **JSON 输出**：`{host, port, listening, latency_ms, pid, process_name}`（pid/process_name 仅本机有效）。
 
 ### 4.12 `read <file> --range <range>`
 - **功能**：按 1 起始的行号区间流式读取文件，跳过区间前、读完区间后即停止，不加载整个文件。
@@ -155,6 +159,18 @@
   - `--wait-port` 等待期间若进程提前退出，报错并提示日志路径；超时未监听则 `ready=false`（进程仍在运行），退出码仍为 0，由调用方检查 `ready` 字段。
   - Windows 下 spawn 前会临时摘除自身 std 句柄的继承标志，防止守护进程持有调用方管道导致调用方永远读不到 EOF（句柄泄漏挂起）。
 - **配套**：停止用 `codex-kit kill <pid>`，状态用 `codex-kit port <port>`，排障用 `codex-kit tail <log>`。
+
+### 4.20 `rm <paths...>` / `trash` / `restore <ids...>`
+- **功能**：安全删除体系，替代 `Remove-Item` / `rm -rf`（永久删除且语法跨平台不一致）。
+- **设计原则**：默认一切可逆，不可逆操作必须显式声明。
+- **`rm`**：
+  - 默认把文件/目录移动到回收站（`~/.codex-kit/trash/<id>/`，含 `meta.json` 记录原路径、删除时间、大小；跨卷自动降级为复制+删除）。
+  - `--force`：永久删除。
+  - `--dry-run`：只预览将发生什么。
+  - 拒绝删除回收站目录本身。
+- **`trash`**：列出回收站（ID、大小、删除时间、原路径，新的在前）；`--empty` 永久清空。
+- **`restore`**：按 ID 还原到原路径（`--all` 全部还原）；原路径已存在时报错拒绝（保护新文件），`--overwrite` 显式覆盖。
+- **JSON 输出**：`rm`/`restore` 输出逐项结果数组（含 error 字段，部分失败时退出码非零）；`trash` 输出元数据数组。
 
 ## 5. 技术实现细节
 

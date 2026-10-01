@@ -48,7 +48,9 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
             timeout,
         } => commands::http::run(url, method, header, data.as_deref(), *timeout, format),
         Commands::Kill { pid } => commands::ps::kill(*pid, format),
-        Commands::Port { port } => commands::port::run(*port, format),
+        Commands::Port { port, host, timeout } => {
+            commands::port::run(*port, host.as_deref(), *timeout, format)
+        }
         Commands::Read { file, range } => commands::read::run(file, range, format),
         Commands::Run { cmd, timeout } => commands::run::run(cmd, *timeout, format),
         Commands::Start {
@@ -72,6 +74,13 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
         Commands::Extract { archive, dest } => commands::archive::extract(archive, dest.as_deref(), format),
         Commands::Write { file, encoding, append } => commands::write::run(file, encoding, *append, format),
         Commands::Hash { file, algorithm } => commands::hash::run(file, algorithm, format),
+        Commands::Rm { paths, force, dry_run } => {
+            commands::trash::rm(paths, *force, *dry_run, format)
+        }
+        Commands::Trash { empty } => commands::trash::list(*empty, format),
+        Commands::Restore { ids, all, overwrite } => {
+            commands::trash::restore(ids, *all, *overwrite, format)
+        }
         Commands::Exec { code, file } => commands::exec::run(code, *file),
     }
 }

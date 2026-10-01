@@ -132,10 +132,17 @@ pub enum Commands {
         /// Process ID
         pid: u32,
     },
-    /// Check if a TCP port is listening (and which process owns it)
+    /// Check a TCP port: listening locally, or reachable on a remote host
     Port {
         /// Port number
         port: u16,
+        /// Host to check (default: 127.0.0.1). Remote hosts get a reachability
+        /// check with latency; owner detection only works locally.
+        #[arg(long)]
+        host: Option<String>,
+        /// Connect timeout in milliseconds
+        #[arg(long, default_value_t = 1000)]
+        timeout: u64,
     },
     /// Read a line range of a file, e.g. --range 100:200
     Read {
@@ -214,6 +221,37 @@ pub enum Commands {
         /// Algorithm: sha256 (default) or md5
         #[arg(short = 'a', long, default_value = "sha256")]
         algorithm: String,
+    },
+    /// Remove files/directories: moves them to the trash by default (safe),
+    /// permanently deletes only with --force
+    Rm {
+        /// Paths to remove
+        #[arg(required = true)]
+        paths: Vec<PathBuf>,
+        /// Permanently delete instead of moving to trash
+        #[arg(long)]
+        force: bool,
+        /// Only show what would be removed, without doing it
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// List trash contents, or empty the trash with --empty
+    Trash {
+        /// Permanently delete everything in the trash
+        #[arg(long)]
+        empty: bool,
+    },
+    /// Restore trashed items to their original locations
+    Restore {
+        /// Trash entry IDs (see `codex-kit trash`), or use --all
+        #[arg(required_unless_present = "all")]
+        ids: Vec<String>,
+        /// Restore everything in the trash
+        #[arg(long)]
+        all: bool,
+        /// Overwrite if the original path exists again
+        #[arg(long)]
+        overwrite: bool,
     },
     /// Run Python code with the system interpreter (fallback escape hatch)
     Exec {

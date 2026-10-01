@@ -13,6 +13,7 @@ pub mod replace;
 pub mod run;
 pub mod start;
 pub mod stat;
+pub mod trash;
 pub mod tree;
 pub mod wc;
 pub mod which;

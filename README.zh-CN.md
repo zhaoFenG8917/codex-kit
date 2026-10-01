@@ -75,7 +75,7 @@ sudo mv codex-kit /usr/local/bin/
 | `codex-kit diff <f1> <f2>` | ➕➖ 文件对比（plain 输出 unified diff，json 输出结构化变更） |
 | `codex-kit ps [name] [--limit N]` | 🧵 进程列表（按内存降序），支持名称过滤 / 取前 N 个 |
 | `codex-kit kill <pid>` | 🔪 按 PID 结束进程 |
-| `codex-kit port <port>` | 🔌 检查 TCP 端口是否在监听，以及被哪个进程占用 |
+| `codex-kit port <port> [--host h] [--timeout ms]` | 🔌 检查本机端口（含占用进程），或探测远程主机端口连通性与延迟 |
 | `codex-kit read <file> --range 100:200` | 📖 按 1 起始的行号区间流式读取，不加载整个文件 |
 | `codex-kit run [--timeout N] <cmd...>` | ⏱️ 带超时执行任意命令，透传退出码，自动解码输出 |
 | `codex-kit start [--wait-port P] [--cwd d] [--log f] <cmd...>` | 🚀 后台拉起长驻服务——脱离会话存活，日志落盘，可等服务端口就绪 |
@@ -85,6 +85,9 @@ sudo mv codex-kit /usr/local/bin/
 | `codex-kit write <file> [--encoding gbk] [--append]` | 💾 将 stdin 以指定编码写入文件 |
 | `codex-kit hash <file> [-a md5\|sha256]` | #️⃣ 流式计算文件校验和 |
 | `codex-kit http <url> [-X M] [-H 'k: v'] [-d body] [--timeout N]` | 🌐 发 HTTP 请求——任何状态码都视为数据（退出码 0），仅传输层失败才非零 |
+| `codex-kit rm <paths...> [--force] [--dry-run]` | 🗑️ 安全删除——默认移入回收站，`--force` 才永久删除 |
+| `codex-kit trash [--empty]` | 🧺 查看回收站 / 清空 |
+| `codex-kit restore <ids...> [--all] [--overwrite]` | ♻️ 把回收站条目还原到原路径 |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 兜底通道：调用**系统** Python 执行代码 |
 
 ## 🤖 接入 Agent
@@ -101,7 +104,8 @@ Route system operations as follows:
 1. Content search: `rg "pattern" [dir]`. File finding: `fd "pattern" [dir]`.
 2. Directory & file operations via `codex-kit`:
     `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
-    `ps` / `kill` / `port` / `run` / `start` / `which` / `write` / `hash` / `archive` / `extract` / `http`.
+    `ps` / `kill` / `port` / `run` / `start` / `which` / `write` / `hash` / `archive` / `extract` /
+    `http` / `rm` / `trash` / `restore`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.
