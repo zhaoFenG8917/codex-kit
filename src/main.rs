@@ -47,18 +47,29 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
             data,
             timeout,
         } => commands::http::run(url, method, header, data.as_deref(), *timeout, format),
-        Commands::Kill { pid } => commands::ps::kill(*pid, format),
-        Commands::Port { port, host, timeout } => {
-            commands::port::run(*port, host.as_deref(), *timeout, format)
-        }
+        Commands::Kill { pid, tree } => commands::ps::kill(*pid, *tree, format),
+        Commands::Port {
+            port,
+            host,
+            timeout,
+            kill,
+            tree,
+        } => commands::port::run(*port, host.as_deref(), *timeout, *kill, *tree, format),
         Commands::Read { file, range } => commands::read::run(file, range, format),
-        Commands::Run { cmd, timeout } => commands::run::run(cmd, *timeout, format),
+        Commands::Run {
+            cmd,
+            timeout,
+            unset,
+            env,
+        } => commands::run::run(cmd, *timeout, unset, env, format),
         Commands::Start {
             name,
             cwd,
             log,
             wait_port,
             wait_timeout,
+            unset,
+            env,
             cmd,
         } => commands::start::run(
             cmd,
@@ -67,6 +78,8 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
             log.as_deref(),
             *wait_port,
             *wait_timeout,
+            unset,
+            env,
             format,
         ),
         Commands::Which { command } => commands::which::run(command, format),
@@ -81,6 +94,23 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
         Commands::Restore { ids, all, overwrite } => {
             commands::trash::restore(ids, *all, *overwrite, format)
         }
+        Commands::Mv { src, dst, force } => commands::mv::run(src, dst, *force, format),
+        Commands::Download {
+            url,
+            output,
+            timeout,
+            force,
+            resume,
+            threads,
+        } => commands::download::run(
+            url,
+            output.as_deref(),
+            *timeout,
+            *force,
+            *resume,
+            *threads,
+            format,
+        ),
         Commands::Exec { code, file } => commands::exec::run(code, *file),
     }
 }

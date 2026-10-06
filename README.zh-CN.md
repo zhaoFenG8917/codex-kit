@@ -74,11 +74,11 @@ sudo mv codex-kit /usr/local/bin/
 | `codex-kit wc <file>` | 🔢 统计行数、词数、字符数、字节数 |
 | `codex-kit diff <f1> <f2>` | ➕➖ 文件对比（plain 输出 unified diff，json 输出结构化变更） |
 | `codex-kit ps [name] [--limit N]` | 🧵 进程列表（按内存降序），支持名称过滤 / 取前 N 个 |
-| `codex-kit kill <pid>` | 🔪 按 PID 结束进程 |
-| `codex-kit port <port> [--host h] [--timeout ms]` | 🔌 检查本机端口（含占用进程），或探测远程主机端口连通性与延迟 |
+| `codex-kit kill <pid> [--tree]` | 🔪 结束进程（--tree 连整棵进程树一起；系统进程与自身祖先链有保护） |
+| `codex-kit port <port> [--host h] [--timeout ms] [--kill] [--tree]` | 🔌 检查本机/远程端口；`--kill` 直接停掉本机监听进程 |
 | `codex-kit read <file> --range 100:200` | 📖 按 1 起始的行号区间流式读取，不加载整个文件 |
-| `codex-kit run [--timeout N] <cmd...>` | ⏱️ 带超时执行任意命令，透传退出码，自动解码输出 |
-| `codex-kit start [--wait-port P] [--cwd d] [--log f] <cmd...>` | 🚀 后台拉起长驻服务——脱离会话存活，日志落盘，可等服务端口就绪 |
+| `codex-kit run [--timeout N] [--unset K] [--env K=V] <cmd...>` | ⏱️ 带超时执行任意命令，可控环境变量，透传退出码，自动解码输出 |
+| `codex-kit start [--wait-port P] [--cwd d] [--log f] [--unset K] [--env K=V] <cmd...>` | 🚀 后台拉起长驻服务——脱离会话存活，日志落盘，可等服务端口就绪 |
 | `codex-kit which <cmd>` | 📍 在 PATH 中定位命令（含版本探测） |
 | `codex-kit archive <out.zip\|out.tar.gz> <inputs...>` | 📦 创建 zip / tar.gz 压缩包 |
 | `codex-kit extract <archive> [-d dest]` | 📂 解压 zip / tar.gz（防路径穿越） |
@@ -88,6 +88,8 @@ sudo mv codex-kit /usr/local/bin/
 | `codex-kit rm <paths...> [--force] [--dry-run]` | 🗑️ 安全删除——默认移入回收站，`--force` 才永久删除 |
 | `codex-kit trash [--empty]` | 🧺 查看回收站 / 清空 |
 | `codex-kit restore <ids...> [--all] [--overwrite]` | ♻️ 把回收站条目还原到原路径 |
+| `codex-kit mv <src> <dst> [--force]` | 🚚 移动/重命名文件目录（跨卷安全，不加 --force 不覆盖） |
+| `codex-kit download <url> [-o file] [--threads N] [--resume] [--force]` | ⬇️ 多线程下载 + 断点续传（Range 感知，不支持时自动降级） |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 兜底通道：调用**系统** Python 执行代码 |
 
 ## 🤖 接入 Agent
@@ -105,7 +107,7 @@ Route system operations as follows:
 2. Directory & file operations via `codex-kit`:
     `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
     `ps` / `kill` / `port` / `run` / `start` / `which` / `write` / `hash` / `archive` / `extract` /
-    `http` / `rm` / `trash` / `restore`.
+    `http` / `rm` / `trash` / `restore` / `mv` / `download`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

@@ -15,9 +15,18 @@ struct PortResult {
     latency_ms: Option<u128>,
     pid: Option<u32>,
     process_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    kill: Option<crate::commands::ps::KillOutcome>,
 }
 
-pub fn run(port: u16, host: Option<&str>, timeout_ms: u64, format: Format) -> Result<()> {
+pub fn run(
+    port: u16,
+    host: Option<&str>,
+    timeout_ms: u64,
+    kill: bool,
+    tree: bool,
+    format: Format,
+) -> Result<()> {
     let host = host.unwrap_or("127.0.0.1");
     let local = matches!(host, "127.0.0.1" | "localhost" | "::1");
     let addr = resolve(host, port)?;
@@ -35,6 +44,18 @@ pub fn run(port: u16, host: Option<&str>, timeout_ms: u64, format: Format) -> Re
     };
     let process_name = pid.and_then(process_name_of);
 
+    let mut kill_outcome = None;
+    if kill {
+        if !local {
+            return Err("--kill only works for local ports".into());
+        }
+        if !listening {
+            return Err(format!("port {port}: not listening, nothing to kill").into());
+        }
+        let pid = pid.ok_or("could not determine the owner pid of this port")?;
+        kill_outcome = Some(crate::commands::ps::kill_impl(pid, tree)?);
+    }
+
     let result = PortResult {
         host: host.to_string(),
         port,
@@ -42,6 +63,7 @@ pub fn run(port: u16, host: Option<&str>, timeout_ms: u64, format: Format) -> Re
         latency_ms,
         pid,
         process_name,
+        kill: kill_outcome,
     };
     match format {
         Format::Json => output::print_json(&result),
@@ -64,6 +86,19 @@ pub fn run(port: u16, host: Option<&str>, timeout_ms: u64, format: Format) -> Re
                 }
             } else {
                 println!("port {port}: not listening");
+            }
+            if let Some(k) = &result.kill {
+                if k.killed {
+                    println!("killed {} (pid {})", k.name, k.pid);
+                } else {
+                    println!("failed to kill {} (pid {})", k.name, k.pid);
+                }
+                if !k.tree_killed.is_empty() {
+                    println!("also killed descendant(s): {:?}", k.tree_killed);
+                }
+                if !k.tree_failed.is_empty() {
+                    println!("failed to kill descendant(s): {:?}", k.tree_failed);
+                }
             }
         }
     }

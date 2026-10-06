@@ -131,6 +131,9 @@ pub enum Commands {
     Kill {
         /// Process ID
         pid: u32,
+        /// Kill the whole process tree (children first)
+        #[arg(long)]
+        tree: bool,
     },
     /// Check a TCP port: listening locally, or reachable on a remote host
     Port {
@@ -143,6 +146,12 @@ pub enum Commands {
         /// Connect timeout in milliseconds
         #[arg(long, default_value_t = 1000)]
         timeout: u64,
+        /// Kill the process listening on this port (local ports only)
+        #[arg(long)]
+        kill: bool,
+        /// With --kill: also kill the listener's whole process tree
+        #[arg(long)]
+        tree: bool,
     },
     /// Read a line range of a file, e.g. --range 100:200
     Read {
@@ -157,6 +166,12 @@ pub enum Commands {
         /// Timeout in seconds
         #[arg(long, default_value_t = 30)]
         timeout: u64,
+        /// Remove an environment variable for the child (repeatable), e.g. --unset HTTP_PROXY
+        #[arg(long)]
+        unset: Vec<String>,
+        /// Set an environment variable for the child (repeatable), e.g. --env KEY=VAL
+        #[arg(long, value_name = "KEY=VAL")]
+        env: Vec<String>,
         /// The command and its arguments (put options like --timeout BEFORE the command)
         #[arg(required = true, trailing_var_arg = true, allow_hyphen_values = true)]
         cmd: Vec<String>,
@@ -178,6 +193,12 @@ pub enum Commands {
         /// Timeout in seconds for --wait-port
         #[arg(long, default_value_t = 60)]
         wait_timeout: u64,
+        /// Remove an environment variable for the child (repeatable)
+        #[arg(long)]
+        unset: Vec<String>,
+        /// Set an environment variable for the child (repeatable), e.g. --env KEY=VAL
+        #[arg(long, value_name = "KEY=VAL")]
+        env: Vec<String>,
         /// The command and its arguments (put options BEFORE the command)
         #[arg(required = true, trailing_var_arg = true, allow_hyphen_values = true)]
         cmd: Vec<String>,
@@ -252,6 +273,38 @@ pub enum Commands {
         /// Overwrite if the original path exists again
         #[arg(long)]
         overwrite: bool,
+    },
+    /// Move or rename a file/directory (cross-volume safe)
+    Mv {
+        /// Source path
+        src: PathBuf,
+        /// Destination path (an existing directory means "move into it")
+        dst: PathBuf,
+        /// Overwrite if the destination exists
+        #[arg(long)]
+        force: bool,
+    },
+    /// Download a file from a URL
+    Download {
+        /// URL to download
+        url: String,
+        /// Output file path (default: filename from URL, in current directory)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+        /// Timeout in seconds per request
+        #[arg(long, default_value_t = 120)]
+        timeout: u64,
+        /// Restart from scratch even if output/partials exist
+        #[arg(long)]
+        force: bool,
+        /// Resume an interrupted download (append for single stream,
+        /// continue per-part for parallel)
+        #[arg(long)]
+        resume: bool,
+        /// Parallel segments when the server supports Range requests
+        /// (falls back to a single stream otherwise)
+        #[arg(long, default_value_t = 4)]
+        threads: usize,
     },
     /// Run Python code with the system interpreter (fallback escape hatch)
     Exec {

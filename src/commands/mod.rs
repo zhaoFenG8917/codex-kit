@@ -1,11 +1,13 @@
 pub mod archive;
 pub mod diff;
+pub mod download;
 pub mod exec;
 pub mod hash;
 pub mod head_tail;
 pub mod http;
 pub mod info;
 pub mod ls;
+pub mod mv;
 pub mod port;
 pub mod ps;
 pub mod read;

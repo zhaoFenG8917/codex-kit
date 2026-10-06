@@ -71,41 +71,6 @@ fn dir_size(path: &Path) -> u64 {
         .sum()
 }
 
-/// Move across volumes if necessary (rename only works within one volume).
-fn move_entry(src: &Path, dst: &Path) -> Result<()> {
-    if let Some(p) = dst.parent() {
-        fs::create_dir_all(p)?;
-    }
-    match fs::rename(src, dst) {
-        Ok(()) => Ok(()),
-        Err(_) => {
-            if src.is_dir() {
-                copy_dir(src, dst)?;
-                fs::remove_dir_all(src)?;
-            } else {
-                fs::copy(src, dst)?;
-                fs::remove_file(src)?;
-            }
-            Ok(())
-        }
-    }
-}
-
-fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
-    fs::create_dir_all(dst)?;
-    for entry in walkdir::WalkDir::new(src) {
-        let entry = entry.map_err(|e| e.to_string())?;
-        let rel = entry.path().strip_prefix(src).map_err(|e| e.to_string())?;
-        let target = dst.join(rel);
-        if entry.file_type().is_dir() {
-            fs::create_dir_all(&target)?;
-        } else {
-            fs::copy(entry.path(), &target)?;
-        }
-    }
-    Ok(())
-}
-
 fn read_meta(entry_dir: &Path) -> Option<TrashMeta> {
     let text = fs::read_to_string(entry_dir.join("meta.json")).ok()?;
     serde_json::from_str(&text).ok()
@@ -215,7 +180,7 @@ pub fn rm(paths: &[PathBuf], force: bool, dry_run: bool, format: Format) -> Resu
             size_bytes: dir_size(path),
             is_dir: path.is_dir(),
         };
-        if let Err(e) = move_entry(path, &entry_dir.join("payload")) {
+        if let Err(e) = crate::utils::move_entry(path, &entry_dir.join("payload")) {
             had_error = true;
             results.push(RmResult {
                 path: display,
@@ -342,7 +307,7 @@ pub fn restore(ids: &[String], all: bool, overwrite: bool, format: Format) -> Re
                 continue;
             }
         }
-        match move_entry(&payload, &dest) {
+        match crate::utils::move_entry(&payload, &dest) {
             Ok(()) => {
                 let _ = fs::remove_dir_all(root.join(&m.id));
                 results.push(RestoreResult {

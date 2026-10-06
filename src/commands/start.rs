@@ -31,6 +31,8 @@ pub fn run(
     log: Option<&Path>,
     wait_port: Option<u16>,
     wait_timeout: u64,
+    unset: &[String],
+    env: &[String],
     format: Format,
 ) -> Result<()> {
     let label = name.map(str::to_string).unwrap_or_else(|| {
@@ -75,6 +77,7 @@ pub fn run(
     if let Some(dir) = cwd {
         command.current_dir(dir);
     }
+    crate::utils::apply_env(&mut command, unset, env)?;
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;

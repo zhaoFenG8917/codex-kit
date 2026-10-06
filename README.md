@@ -74,11 +74,11 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit wc <file>` | 🔢 Lines, words, chars, bytes |
 | `codex-kit diff <f1> <f2>` | ➕➖ Unified diff (plain) / structured change list (json) |
 | `codex-kit ps [name] [--limit N]` | 🧵 List processes (sorted by memory), optional name filter / top-N |
-| `codex-kit kill <pid>` | 🔪 Kill a process by PID |
-| `codex-kit port <port> [--host h] [--timeout ms]` | 🔌 Check a local port (incl. owner process) or a remote host:port reachability with latency |
+| `codex-kit kill <pid> [--tree]` | 🔪 Kill a process (optionally its whole tree; system processes & ancestors protected) |
+| `codex-kit port <port> [--host h] [--timeout ms] [--kill] [--tree]` | 🔌 Check local/remote ports; `--kill` stops the local listener directly |
 | `codex-kit read <file> --range 100:200` | 📖 Read a 1-based line range, streaming (no full-file load) |
-| `codex-kit run [--timeout N] <cmd...>` | ⏱️ Run any command with timeout, exit-code passthrough, decoded output |
-| `codex-kit start [--wait-port P] [--cwd d] [--log f] <cmd...>` | 🚀 Launch a detached background service — survives the session, logs to file, optionally waits for its port |
+| `codex-kit run [--timeout N] [--unset K] [--env K=V] <cmd...>` | ⏱️ Run any command with timeout, env control, exit-code passthrough, decoded output |
+| `codex-kit start [--wait-port P] [--cwd d] [--log f] [--unset K] [--env K=V] <cmd...>` | 🚀 Launch a detached background service — survives the session, logs to file, optionally waits for its port |
 | `codex-kit which <cmd>` | 📍 Locate a command on PATH (+ version probe) |
 | `codex-kit archive <out.zip\|out.tar.gz> <inputs...>` | 📦 Create zip / tar.gz archives |
 | `codex-kit extract <archive> [-d dest]` | 📂 Extract zip / tar.gz (path-traversal safe) |
@@ -88,6 +88,8 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit rm <paths...> [--force] [--dry-run]` | 🗑️ Safe delete — moves to trash by default, permanent only with `--force` |
 | `codex-kit trash [--empty]` | 🧺 List trash contents / empty it |
 | `codex-kit restore <ids...> [--all] [--overwrite]` | ♻️ Restore trashed items to their original paths |
+| `codex-kit mv <src> <dst> [--force]` | 🚚 Move/rename files & dirs (cross-volume safe, no clobber without --force) |
+| `codex-kit download <url> [-o file] [--threads N] [--resume] [--force]` | ⬇️ Multi-threaded download with resume (Range-aware, graceful fallback) |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 Escape hatch: run code with the **system** Python |
 
 ## 🤖 Agent Integration
@@ -105,7 +107,7 @@ Route system operations as follows:
 2. Directory & file operations via `codex-kit`:
     `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
     `ps` / `kill` / `port` / `run` / `start` / `which` / `write` / `hash` / `archive` / `extract` /
-    `http` / `rm` / `trash` / `restore`.
+    `http` / `rm` / `trash` / `restore` / `mv` / `download`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

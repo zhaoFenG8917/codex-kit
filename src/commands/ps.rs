@@ -67,36 +67,142 @@ pub fn ps(name: Option<&str>, limit: Option<usize>, format: Format) -> Result<()
     Ok(())
 }
 
-pub fn kill(pid: u32, format: Format) -> Result<()> {
+#[derive(Serialize)]
+pub struct KillOutcome {
+    pub pid: u32,
+    pub name: String,
+    pub killed: bool,
+    pub tree_killed: Vec<u32>,
+    pub tree_failed: Vec<u32>,
+}
+
+/// Refuse to touch anything that could take down the OS or ourselves:
+/// the idle/system PIDs, this process, and any ancestor of this process
+/// (killing those would take the calling shell/agent down with us).
+fn is_protected(sys: &System, pid: Pid) -> bool {
+    let raw = pid.as_u32();
+    if raw == 0 || raw == 4 {
+        return true;
+    }
+    let mut cur = sys.process(Pid::from_u32(std::process::id()));
+    while let Some(p) = cur {
+        if p.pid() == pid {
+            return true;
+        }
+        cur = p.parent().and_then(|pp| sys.process(pp));
+    }
+    false
+}
+
+/// Descendants of `root`, post-order (deepest children first).
+fn descendants(sys: &System, root: Pid) -> Vec<Pid> {
+    fn visit(sys: &System, pid: Pid, order: &mut Vec<Pid>) {
+        for (p, proc_) in sys.processes() {
+            if proc_.parent() == Some(pid) {
+                visit(sys, *p, order);
+                order.push(*p);
+            }
+        }
+    }
+    let mut order = Vec::new();
+    visit(sys, root, &mut order);
+    order
+}
+
+/// Hard cap so a bad PID can never snowball into killing half the machine.
+const MAX_TREE: usize = 64;
+
+/// Kill one process; "already exited" counts as success (a wrapper like
+/// `cmd /c` often exits on its own the moment its child dies).
+fn kill_one(sys: &mut System, pid: Pid) -> bool {
+    if let Some(p) = sys.process(pid) {
+        if p.kill() {
+            return true;
+        }
+    }
+    sys.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
+    sys.process(pid).is_none()
+}
+
+pub fn kill_impl(pid: u32, tree: bool) -> Result<KillOutcome> {
     let mut sys = System::new();
     sys.refresh_processes(ProcessesToUpdate::All, true);
+    let target = Pid::from_u32(pid);
+    if is_protected(&sys, target) {
+        return Err(format!(
+            "refusing to kill pid {pid}: it is a system process or an ancestor of this process"
+        )
+        .into());
+    }
     let process = sys
-        .process(Pid::from_u32(pid))
+        .process(target)
         .ok_or_else(|| format!("no process with pid {pid}"))?;
     let name = process.name().to_string_lossy().into_owned();
-    let killed = process.kill();
 
-    #[derive(Serialize)]
-    struct KillResult {
-        pid: u32,
-        name: String,
-        killed: bool,
+    // Parent first: wrapper processes (cmd/npm) may exit when their child
+    // dies, so kill the target while it is definitely alive, then sweep
+    // the (precomputed) descendants.
+    let killed = kill_one(&mut sys, target);
+
+    let mut tree_killed = Vec::new();
+    let mut tree_failed = Vec::new();
+    if tree {
+        let desc = descendants(&sys, target);
+        if desc.len() > MAX_TREE {
+            return Err(format!(
+                "refusing to kill pid {pid}: its process tree has {} descendants (limit {MAX_TREE}); inspect with `codex-kit ps` first",
+                desc.len()
+            )
+            .into());
+        }
+        for d in desc {
+            if is_protected(&sys, d) {
+                tree_failed.push(d.as_u32());
+                continue;
+            }
+            if kill_one(&mut sys, d) {
+                tree_killed.push(d.as_u32());
+            } else {
+                tree_failed.push(d.as_u32());
+            }
+        }
     }
-    let result = KillResult { pid, name, killed };
+
+    Ok(KillOutcome {
+        pid,
+        name,
+        killed,
+        tree_killed,
+        tree_failed,
+    })
+}
+
+pub fn kill(pid: u32, tree: bool, format: Format) -> Result<()> {
+    let result = kill_impl(pid, tree)?;
     match format {
         Format::Json => output::print_json(&result),
         Format::Plain => {
-            if killed {
+            if result.killed {
                 println!("killed {} (pid {pid})", result.name);
             } else {
                 println!("failed to kill {} (pid {pid})", result.name);
             }
+            if !result.tree_killed.is_empty() {
+                println!(
+                    "also killed {} descendant(s): {:?}",
+                    result.tree_killed.len(),
+                    result.tree_killed
+                );
+            }
+            if !result.tree_failed.is_empty() {
+                println!("failed to kill descendant(s): {:?}", result.tree_failed);
+            }
         }
     }
-    if killed {
+    if result.killed && result.tree_failed.is_empty() {
         Ok(())
     } else {
-        Err(format!("kill signal failed for pid {pid}").into())
+        Err(format!("kill not fully successful for pid {pid}").into())
     }
 }
 

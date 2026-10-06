@@ -21,13 +21,21 @@ struct RunResult {
 /// Execute an external command with a timeout. stdout/stderr are captured on
 /// reader threads (no pipe deadlock), output is decoded with encoding
 /// auto-detection, and the child exit code is propagated (124 on timeout).
-pub fn run(cmd: &[String], timeout: u64, format: Format) -> Result<()> {
+pub fn run(
+    cmd: &[String],
+    timeout: u64,
+    unset: &[String],
+    env: &[String],
+    format: Format,
+) -> Result<()> {
     let started = Instant::now();
-    let mut child = Command::new(&cmd[0])
-        .args(&cmd[1..])
+    let mut command = Command::new(&cmd[0]);
+    command.args(&cmd[1..])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    crate::utils::apply_env(&mut command, unset, env)?;
+    let mut child = command
         .spawn()
         .map_err(|e| format!("failed to start '{}': {e}", cmd[0]))?;
 

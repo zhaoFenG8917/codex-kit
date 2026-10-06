@@ -39,6 +39,8 @@
 | **文件校验** | **`codex-kit hash`** | 流式计算 md5 / sha256 校验和 |
 | **HTTP 请求** | **`codex-kit http`** | 跨平台替代 curl/Invoke-RestMethod，状态码视为数据 |
 | **安全删除** | **`codex-kit rm/trash/restore`** | 默认移入回收站可还原，替代 Remove-Item/rm -rf |
+| **文件移动** | **`codex-kit mv`** | 跨卷移动/重命名，默认不覆盖目标 |
+| **文件下载** | **`codex-kit download`** | 流式下载 URL 到文件，替代 Invoke-WebRequest/curl |
 | **动态代码执行兜底** | **`codex-kit exec`** | 调用系统 Python 执行任意代码 |
 
 ## 4. 详细功能需求 (子命令设计)
@@ -101,15 +103,18 @@
 
 ### 4.10 `ps [name]` / `kill <pid>`
 - **功能**：`ps` 列出系统进程（可按名称不区分大小写过滤，按内存降序）；`kill` 按 PID 结束进程。
-- **参数**：`ps` 支持 `--limit <N>` 只取内存占用前 N 个进程。
-- **JSON 输出**：`ps` 输出包含 `pid`, `name`, `exe`, `memory_bytes`, `started` 的数组；`kill` 输出 `{pid, name, killed}`。
+- **参数**：`ps` 支持 `--limit <N>` 只取内存占用前 N 个进程；`kill` 支持 `--tree` 连杀整棵进程树（先杀目标再清扫预收集的后代，解决 cmd/npm 包装进程杀父留子的问题）。
+- **安全护栏**：拒绝杀死 pid 0/4、自身及自身祖先链进程；进程树后代超过 64 个时拒绝执行；杀失败后会复查进程是否已自行退出（包装进程常在子进程死亡时自动退出，视为成功）。
+- **JSON 输出**：`ps` 输出包含 `pid`, `name`, `exe`, `memory_bytes`, `started` 的数组；`kill` 输出 `{pid, name, killed, tree_killed[], tree_failed[]}`。
 
 ### 4.11 `port <port>`
 - **功能**：检查 TCP 端口。本机（默认 127.0.0.1）报告监听状态与占用进程（Windows 解析 `netstat -ano`，Unix 使用 `lsof`）；指定远程主机时探测连通性并测量握手延迟，替代 `Test-NetConnection`。
 - **参数**：
   - `--host <主机>`：目标主机（IP 或域名，自动 DNS 解析），默认 127.0.0.1。
   - `--timeout <ms>`：连接超时毫秒数，默认 1000。
-- **JSON 输出**：`{host, port, listening, latency_ms, pid, process_name}`（pid/process_name 仅本机有效）。
+  - `--kill`：直接结束本机监听进程（停 dev server 一条命令：`codex-kit port 5173 --kill`），与 `kill` 共用同一套安全护栏。
+  - `--tree`：配合 `--kill` 连杀监听者的整棵进程树。
+- **JSON 输出**：`{host, port, listening, latency_ms, pid, process_name, kill?}`（pid/process_name 仅本机有效）。
 
 ### 4.12 `read <file> --range <range>`
 - **功能**：按 1 起始的行号区间流式读取文件，跳过区间前、读完区间后即停止，不加载整个文件。
@@ -118,6 +123,7 @@
 
 ### 4.13 `run [--timeout N] <cmd...>`
 - **功能**：带超时（默认 30 秒）执行任意外部命令，stdout/stderr 在独立线程捕获（无管道死锁），输出自动解码。
+- **参数**：`--unset <KEY>` 为子进程删除环境变量（可重复，如清掉 HTTP_PROXY 等代理变量）；`--env <KEY=VAL>` 为子进程设置环境变量（可重复）。
 - **行为**：透传子进程退出码；超时返回 124。注意 `--timeout` 等选项须写在被执行命令之前。
 
 ### 4.14 `which <command>`
@@ -154,6 +160,7 @@
   - `--log <file>`：日志文件路径（默认：临时目录下自动命名），stdout/stderr 均追加写入。
   - `--wait-port <port>`：启动后等待该 TCP 端口开始监听再返回。
   - `--wait-timeout <N>`：`--wait-port` 的等待秒数，默认 60。
+  - `--unset <KEY>` / `--env <KEY=VAL>`：为服务进程删除/设置环境变量（可重复）。
 - **行为**：
   - 启动即返回 `{pid, name, cmd, log, detached, wait_port, ready}`；不持有子进程。
   - `--wait-port` 等待期间若进程提前退出，报错并提示日志路径；超时未监听则 `ready=false`（进程仍在运行），退出码仍为 0，由调用方检查 `ready` 字段。
@@ -171,6 +178,24 @@
 - **`trash`**：列出回收站（ID、大小、删除时间、原路径，新的在前）；`--empty` 永久清空。
 - **`restore`**：按 ID 还原到原路径（`--all` 全部还原）；原路径已存在时报错拒绝（保护新文件），`--overwrite` 显式覆盖。
 - **JSON 输出**：`rm`/`restore` 输出逐项结果数组（含 error 字段，部分失败时退出码非零）；`trash` 输出元数据数组。
+
+### 4.21 `mv <src> <dst>`
+- **功能**：移动/重命名文件或目录，跨卷自动降级为复制+删除；目标是已存在目录时移入该目录（Unix mv 语义）。
+- **安全性**：目标已存在时报错拒绝，`--force` 显式覆盖。
+
+### 4.22 `download <url>`
+- **功能**：把 URL 下载到文件（二进制安全，不做文本解码），替代 `Invoke-WebRequest -OutFile` / `curl -O`，并做多线程与断点续传增强。
+- **参数**：
+  - `-o, --output <file>`：输出路径（默认取 URL 末段文件名，存当前目录）。
+  - `--threads <N>`：并行分段数，默认 4；服务器支持 Range 且文件 ≥8MB 时生效，否则自动降级单流。
+  - `--resume`：断点续传。单流模式按已有字节发 `Range: bytes=N-` 追加；并行模式以 `<output>.ckparts/part-N` 的文件长度作为续传位置，重跑同参数命令即可继续。
+  - `--timeout <N>`：单请求超时秒数，默认 120。
+  - `--force`：删除已有输出与分段缓存，从头下载。
+- **行为**：
+  - 先 HEAD 探测（不行则 `Range: bytes=0-0` 探测）获取总大小与 Range 支持。
+  - 分段下载写入 `<output>.ckparts/`（含 meta.json 记录 url/大小/线程数，计划不一致自动作废重下），全部完成后拼接并清理。
+  - 分段计划变更（URL/大小/线程数不同）时旧 part 自动作废，不会拼错数据。
+  - 非 2xx 响应（如 404）直接报错且不产生残留文件；输出文件已存在且未给 `--resume`/`--force` 时报错。
 
 ## 5. 技术实现细节
 
