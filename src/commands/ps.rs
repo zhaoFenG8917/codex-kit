@@ -3,7 +3,16 @@ use crate::utils::output;
 use crate::utils::Result;
 use chrono::{DateTime, Local};
 use serde::Serialize;
-use sysinfo::{Pid, ProcessesToUpdate, System};
+use std::collections::HashSet;
+use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System};
+
+/// Kill/enumerate paths must not read PEB/exe/cmdline/environ of every
+/// process: on Windows that opens handles and walks memory of processes that
+/// may be suspended or protected, which can block for a long time. We only
+/// need pid/parent/name, and those come from the fast Toolhelp snapshot.
+fn light_refresh(sys: &mut System, which: ProcessesToUpdate<'_>) {
+    sys.refresh_processes_specifics(which, true, ProcessRefreshKind::nothing());
+}
 
 #[derive(Serialize)]
 struct Proc {
@@ -79,33 +88,41 @@ pub struct KillOutcome {
 /// Refuse to touch anything that could take down the OS or ourselves:
 /// the idle/system PIDs, this process, and any ancestor of this process
 /// (killing those would take the calling shell/agent down with us).
+/// The visited set guards against parent-pointer cycles caused by PID reuse
+/// (a stale parent PID pointing at a descendant loops forever otherwise).
 fn is_protected(sys: &System, pid: Pid) -> bool {
     let raw = pid.as_u32();
     if raw == 0 || raw == 4 {
         return true;
     }
+    let mut visited = HashSet::new();
     let mut cur = sys.process(Pid::from_u32(std::process::id()));
     while let Some(p) = cur {
         if p.pid() == pid {
             return true;
+        }
+        if !visited.insert(p.pid()) {
+            break;
         }
         cur = p.parent().and_then(|pp| sys.process(pp));
     }
     false
 }
 
-/// Descendants of `root`, post-order (deepest children first).
+/// Descendants of `root`, post-order (deepest children first). The visited
+/// set guards against parent-pointer cycles caused by PID reuse.
 fn descendants(sys: &System, root: Pid) -> Vec<Pid> {
-    fn visit(sys: &System, pid: Pid, order: &mut Vec<Pid>) {
+    fn visit(sys: &System, pid: Pid, order: &mut Vec<Pid>, visited: &mut HashSet<Pid>) {
         for (p, proc_) in sys.processes() {
-            if proc_.parent() == Some(pid) {
-                visit(sys, *p, order);
+            if proc_.parent() == Some(pid) && visited.insert(*p) {
+                visit(sys, *p, order, visited);
                 order.push(*p);
             }
         }
     }
     let mut order = Vec::new();
-    visit(sys, root, &mut order);
+    let mut visited = HashSet::from([root]);
+    visit(sys, root, &mut order, &mut visited);
     order
 }
 
@@ -120,13 +137,30 @@ fn kill_one(sys: &mut System, pid: Pid) -> bool {
             return true;
         }
     }
-    sys.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
+    light_refresh(sys, ProcessesToUpdate::Some(&[pid]));
     sys.process(pid).is_none()
 }
 
 pub fn kill_impl(pid: u32, tree: bool) -> Result<KillOutcome> {
+    // Enumeration can stall on a machine with processes in a bad state; run
+    // the work on a watchdog thread and give up with a clear error instead of
+    // hanging forever (the stuck thread dies when the process exits).
+    let (tx, rx) = std::sync::mpsc::channel::<std::result::Result<KillOutcome, String>>();
+    std::thread::spawn(move || {
+        let _ = tx.send(kill_impl_inner(pid, tree).map_err(|e| e.to_string()));
+    });
+    match rx.recv_timeout(std::time::Duration::from_secs(20)) {
+        Ok(r) => r.map_err(Into::into),
+        Err(_) => Err(
+            "process enumeration timed out after 20s (system busy or a process is in a bad state)"
+                .into(),
+        ),
+    }
+}
+
+fn kill_impl_inner(pid: u32, tree: bool) -> Result<KillOutcome> {
     let mut sys = System::new();
-    sys.refresh_processes(ProcessesToUpdate::All, true);
+    light_refresh(&mut sys, ProcessesToUpdate::All);
     let target = Pid::from_u32(pid);
     if is_protected(&sys, target) {
         return Err(format!(

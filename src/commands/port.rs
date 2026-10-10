@@ -155,7 +155,12 @@ fn find_owner_pid(port: u16) -> Option<u32> {
 
 fn process_name_of(pid: u32) -> Option<String> {
     let mut sys = System::new();
-    sys.refresh_processes(ProcessesToUpdate::All, true);
+    // Light refresh: pid/parent/name only (see ps.rs light_refresh).
+    sys.refresh_processes_specifics(
+        ProcessesToUpdate::All,
+        true,
+        sysinfo::ProcessRefreshKind::nothing(),
+    );
     sys.process(Pid::from_u32(pid))
         .map(|p| p.name().to_string_lossy().into_owned())
 }
