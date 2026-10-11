@@ -1,4 +1,5 @@
 pub mod archive;
+pub mod cp;
 pub mod diff;
 pub mod download;
 pub mod exec;

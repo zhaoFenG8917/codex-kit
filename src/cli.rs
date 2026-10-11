@@ -284,6 +284,16 @@ pub enum Commands {
         #[arg(long)]
         force: bool,
     },
+    /// Copy a file or directory (recursive)
+    Cp {
+        /// Source path
+        src: PathBuf,
+        /// Destination path (an existing directory means "copy into it")
+        dst: PathBuf,
+        /// Overwrite if the destination exists
+        #[arg(long)]
+        force: bool,
+    },
     /// Download a file from a URL
     Download {
         /// URL to download

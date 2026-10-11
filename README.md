@@ -89,6 +89,7 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit trash [--empty]` | 🧺 List trash contents / empty it |
 | `codex-kit restore <ids...> [--all] [--overwrite]` | ♻️ Restore trashed items to their original paths |
 | `codex-kit mv <src> <dst> [--force]` | 🚚 Move/rename files & dirs (cross-volume safe, no clobber without --force) |
+| `codex-kit cp <src> <dst> [--force]` | 📄 Copy files & dirs (recursive, no clobber without --force) |
 | `codex-kit download <url> [-o file] [--threads N] [--resume] [--force]` | ⬇️ Multi-threaded download with resume (Range-aware, graceful fallback) |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 Escape hatch: run code with the **system** Python |
 
@@ -107,7 +108,7 @@ Route system operations as follows:
 2. Directory & file operations via `codex-kit`:
     `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
     `ps` / `kill` / `port` / `run` / `start` / `which` / `write` / `hash` / `archive` / `extract` /
-    `http` / `rm` / `trash` / `restore` / `mv` / `download`.
+    `http` / `rm` / `trash` / `restore` / `mv` / `cp` / `download`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

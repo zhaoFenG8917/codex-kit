@@ -24,7 +24,7 @@ pub fn move_entry(src: &std::path::Path, dst: &std::path::Path) -> Result<()> {
     }
 }
 
-fn copy_dir(src: &std::path::Path, dst: &std::path::Path) -> Result<()> {
+pub fn copy_dir(src: &std::path::Path, dst: &std::path::Path) -> Result<()> {
     std::fs::create_dir_all(dst)?;
     for entry in walkdir::WalkDir::new(src) {
         let entry = entry.map_err(|e| e.to_string())?;

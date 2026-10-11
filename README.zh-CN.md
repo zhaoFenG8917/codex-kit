@@ -89,6 +89,7 @@ sudo mv codex-kit /usr/local/bin/
 | `codex-kit trash [--empty]` | 🧺 查看回收站 / 清空 |
 | `codex-kit restore <ids...> [--all] [--overwrite]` | ♻️ 把回收站条目还原到原路径 |
 | `codex-kit mv <src> <dst> [--force]` | 🚚 移动/重命名文件目录（跨卷安全，不加 --force 不覆盖） |
+| `codex-kit cp <src> <dst> [--force]` | 📄 复制文件/目录（递归，不加 --force 不覆盖） |
 | `codex-kit download <url> [-o file] [--threads N] [--resume] [--force]` | ⬇️ 多线程下载 + 断点续传（Range 感知，不支持时自动降级） |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 兜底通道：调用**系统** Python 执行代码 |
 
@@ -107,7 +108,7 @@ Route system operations as follows:
 2. Directory & file operations via `codex-kit`:
     `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
     `ps` / `kill` / `port` / `run` / `start` / `which` / `write` / `hash` / `archive` / `extract` /
-    `http` / `rm` / `trash` / `restore` / `mv` / `download`.
+    `http` / `rm` / `trash` / `restore` / `mv` / `cp` / `download`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`
    (automatic encoding detection) over raw shell reads.
 4. For risky replacements run `codex-kit replace <file> <old> <new> --dry-run` first.

@@ -95,6 +95,7 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
             commands::trash::restore(ids, *all, *overwrite, format)
         }
         Commands::Mv { src, dst, force } => commands::mv::run(src, dst, *force, format),
+        Commands::Cp { src, dst, force } => commands::cp::run(src, dst, *force, format),
         Commands::Download {
             url,
             output,
