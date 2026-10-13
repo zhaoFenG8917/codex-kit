@@ -73,7 +73,7 @@ sudo mv codex-kit /usr/local/bin/
 | `codex-kit tail <file> [-n N]` | ⬇️ 读取后 N 行，从文件尾部反向分块读取 |
 | `codex-kit wc <file>` | 🔢 统计行数、词数、字符数、字节数 |
 | `codex-kit diff <f1> <f2>` | ➕➖ 文件对比（plain 输出 unified diff，json 输出结构化变更） |
-| `codex-kit ps [name] [--limit N]` | 🧵 进程列表（按内存降序），支持名称过滤 / 取前 N 个 |
+| `codex-kit ps [name] [--limit N] [--pid N] [--cmd]` | 🧵 进程列表（按内存降序）；--cmd 显示完整命令行并同时按命令行过滤 |
 | `codex-kit kill <pid> [--tree]` | 🔪 结束进程（--tree 连整棵进程树一起；系统进程与自身祖先链有保护） |
 | `codex-kit port <port> [--host h] [--timeout ms] [--kill] [--tree]` | 🔌 检查本机/远程端口；`--kill` 直接停掉本机监听进程 |
 | `codex-kit read <file> --range 100:200` | 📖 按 1 起始的行号区间流式读取，不加载整个文件 |

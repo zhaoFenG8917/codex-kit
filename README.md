@@ -73,7 +73,7 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit tail <file> [-n N]` | ⬇️ Last N lines, backward block-seek reading |
 | `codex-kit wc <file>` | 🔢 Lines, words, chars, bytes |
 | `codex-kit diff <f1> <f2>` | ➕➖ Unified diff (plain) / structured change list (json) |
-| `codex-kit ps [name] [--limit N]` | 🧵 List processes (sorted by memory), optional name filter / top-N |
+| `codex-kit ps [name] [--limit N] [--pid N] [--cmd]` | 🧵 List processes (sorted by memory); --cmd shows full command lines and also matches them |
 | `codex-kit kill <pid> [--tree]` | 🔪 Kill a process (optionally its whole tree; system processes & ancestors protected) |
 | `codex-kit port <port> [--host h] [--timeout ms] [--kill] [--tree]` | 🔌 Check local/remote ports; `--kill` stops the local listener directly |
 | `codex-kit read <file> --range 100:200` | 📖 Read a 1-based line range, streaming (no full-file load) |

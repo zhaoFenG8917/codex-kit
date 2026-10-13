@@ -1,6 +1,6 @@
 [package]
 name = "codex-kit"
-version = "0.3.4"
+version = "0.3.5"
 edition = "2021"
 description = "Cross-platform system-operation CLI toolkit for AI coding agents"
 license = "MIT"
@@ -24,7 +24,7 @@ glob = "0.3"
 regex = "1"
 ureq = "2"
 sysinfo = "0.33"
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Console"] }
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_Threading"] }
 zip = "2"
 tar = "0.4"
 flate2 = "1"

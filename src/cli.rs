@@ -109,6 +109,12 @@ pub enum Commands {
         /// Only show the top N processes (sorted by memory)
         #[arg(long)]
         limit: Option<usize>,
+        /// Only show the process with this PID
+        #[arg(long)]
+        pid: Option<u32>,
+        /// Include the full command line (replaces Get-CimInstance lookups)
+        #[arg(long)]
+        cmd: bool,
     },
     /// Make an HTTP request (cross-platform curl/Invoke-RestMethod alternative)
     Http {

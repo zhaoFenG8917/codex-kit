@@ -91,7 +91,8 @@ pub fn run(
                 if k.killed {
                     println!("killed {} (pid {})", k.name, k.pid);
                 } else {
-                    println!("failed to kill {} (pid {})", k.name, k.pid);
+                    let why = k.reason.as_deref().unwrap_or("unknown error");
+                    println!("failed to kill {} (pid {}): {why}", k.name, k.pid);
                 }
                 if !k.tree_killed.is_empty() {
                     println!("also killed descendant(s): {:?}", k.tree_killed);

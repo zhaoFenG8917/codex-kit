@@ -39,7 +39,12 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
         Commands::Tail { file, lines } => commands::head_tail::tail(file, *lines, format),
         Commands::Wc { file } => commands::wc::run(file, format),
         Commands::Diff { file1, file2 } => commands::diff::run(file1, file2, format),
-        Commands::Ps { name, limit } => commands::ps::ps(name.as_deref(), *limit, format),
+        Commands::Ps {
+            name,
+            pid,
+            cmd,
+            limit,
+        } => commands::ps::ps(name.as_deref(), *pid, *cmd, *limit, format),
         Commands::Http {
             url,
             method,
