@@ -60,16 +60,37 @@ pub enum Commands {
     Replace {
         /// Target file
         file: PathBuf,
-        /// Text (or regex with --regex) to search for
-        old: String,
-        /// Replacement text
-        new: String,
+        /// Text (or regex with --regex) to search for; omit when using --old-file
+        old: Option<String>,
+        /// Replacement text; omit when using --new-file
+        new: Option<String>,
+        /// Read the search text from a file (robust for multi-line/CJK blocks)
+        #[arg(long, value_name = "FILE")]
+        old_file: Option<PathBuf>,
+        /// Read the replacement text from a file
+        #[arg(long, value_name = "FILE")]
+        new_file: Option<PathBuf>,
         /// Only print a diff preview, do not modify the file
         #[arg(long)]
         dry_run: bool,
         /// Treat <old> as a regular expression
         #[arg(long)]
         regex: bool,
+        /// Do not create a <file>.bak backup
+        #[arg(long)]
+        no_backup: bool,
+    },
+    /// Apply a multi-hunk guarded patch from a JSON spec file (all-or-nothing,
+    /// CRLF-insensitive, per-hunk match-count assertions)
+    Patch {
+        /// Target file
+        file: PathBuf,
+        /// JSON spec: [{"old": "...", "new": "...", "count": 1}, ...]
+        #[arg(long, value_name = "SPEC.json")]
+        spec: PathBuf,
+        /// Only print a diff preview, do not modify the file
+        #[arg(long)]
+        dry_run: bool,
         /// Do not create a <file>.bak backup
         #[arg(long)]
         no_backup: bool,

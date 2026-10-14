@@ -68,7 +68,8 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit tree [path] [-d N] [--ignore glob]` | 🌲 Directory tree with depth limit and ignore globs |
 | `codex-kit info <path>` | 🔍 File/dir metadata (type, size, timestamps, readonly) |
 | `codex-kit stat` | 🖥️ Probe OS, arch, hostname, PATH, python/node/git versions |
-| `codex-kit replace <file> <old> <new> [--dry-run] [--regex] [--no-backup]` | ✏️ Safe text replace — original encoding preserved, `.bak` backup by default |
+| `codex-kit replace <file> <old> <new> [--old-file f] [--new-file f] [--dry-run] [--regex] [--no-backup]` | ✏️ Safe text replace — CRLF-insensitive, original encoding preserved, `.bak` backup by default |
+| `codex-kit patch <file> --spec spec.json [--dry-run] [--no-backup]` | 🩹 Multi-hunk guarded patch (`[{"old","new","count"}]`), all-or-nothing with per-hunk assertions |
 | `codex-kit head <file> [-n N]` | ⬆️ First N lines, memory-safe on huge files |
 | `codex-kit tail <file> [-n N]` | ⬇️ Last N lines, backward block-seek reading |
 | `codex-kit wc <file>` | 🔢 Lines, words, chars, bytes |
@@ -106,7 +107,7 @@ Route system operations as follows:
 
 1. Content search: `rg "pattern" [dir]`. File finding: `fd "pattern" [dir]`.
 2. Directory & file operations via `codex-kit`:
-    `ls` / `tree` / `info` / `stat` / `replace` / `head` / `tail` / `wc` / `diff` / `read` /
+    `ls` / `tree` / `info` / `stat` / `replace` / `patch` / `head` / `tail` / `wc` / `diff` / `read` /
     `ps` / `kill` / `port` / `run` / `start` / `which` / `write` / `hash` / `archive` / `extract` /
     `http` / `rm` / `trash` / `restore` / `mv` / `cp` / `download`.
 3. Text files on Windows may be GBK-encoded — prefer `codex-kit head/tail/wc/replace`

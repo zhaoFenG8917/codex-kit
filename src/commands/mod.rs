@@ -9,6 +9,7 @@ pub mod http;
 pub mod info;
 pub mod ls;
 pub mod mv;
+pub mod patch;
 pub mod port;
 pub mod ps;
 pub mod read;
