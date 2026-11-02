@@ -102,12 +102,13 @@ pub fn rm(paths: &[PathBuf], force: bool, dry_run: bool, format: Format) -> Resu
     for path in paths {
         let display = path.display().to_string();
         if !path.exists() {
-            had_error = true;
+            // Cleanup is naturally idempotent: a path that is already gone
+            // is not a failure, especially in multi-path `rm` calls.
             results.push(RmResult {
                 path: display,
-                action: "error".into(),
+                action: "skipped (not found)".into(),
                 id: None,
-                error: Some("not found".into()),
+                error: None,
             });
             continue;
         }
