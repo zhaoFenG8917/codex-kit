@@ -208,11 +208,18 @@
   - `--resume`：断点续传。单流模式按已有字节发 `Range: bytes=N-` 追加；并行模式以 `<output>.ckparts/part-N` 的文件长度作为续传位置，重跑同参数命令即可继续。
   - `--timeout <N>`：单请求超时秒数，默认 120。
   - `--force`：删除已有输出与分段缓存，从头下载。
+  - `--no-progress`：关闭 stderr 上的进度输出（默认开启）。
 - **行为**：
   - 先 HEAD 探测（不行则 `Range: bytes=0-0` 探测）获取总大小与 Range 支持。
   - 分段下载写入 `<output>.ckparts/`（含 meta.json 记录 url/大小/线程数，计划不一致自动作废重下），全部完成后拼接并清理。
   - 分段计划变更（URL/大小/线程数不同）时旧 part 自动作废，不会拼错数据。
   - 非 2xx 响应（如 404）直接报错且不产生残留文件；输出文件已存在且未给 `--resume`/`--force` 时报错。
+- **进度输出**（一律写 stderr，stdout 始终保持干净数据流）：
+  - 终端（TTY）：单行动画进度条，`\r` 原地重绘（200ms 节流），完成后补换行；中断退出时也会补换行，不留半行。
+  - 管道/智能体场景：每 2 秒输出一行文本，形如 `downloading 45.2% [####------...] 9.0/20.0 MB 1.5 MB/s eta 7s`，完成时输出 100% 行。
+  - `--format json`：进度为 stderr 上的 NDJSON 事件 `{"event":"progress","downloaded":N,"total":M,"percent":P,"bytes_per_sec":S,"eta_seconds":E}`，与 stdout 的最终结果 JSON 分离。
+  - 总大小未知（服务器未给 Content-Length）时降级为只显示已下载字节与速度，无百分比与进度条。
+  - 断点续传时已下载字节计入进度基数（百分比从续传点起步），但不计入速度统计。
 
 ## 5. 技术实现细节
 

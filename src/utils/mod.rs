@@ -1,5 +1,6 @@
 pub mod encoding;
 pub mod output;
+pub mod progress;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 

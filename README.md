@@ -91,7 +91,7 @@ Global flag: `--format plain|json` (default: `plain`).
 | `codex-kit restore <ids...> [--all] [--overwrite]` | ♻️ Restore trashed items to their original paths |
 | `codex-kit mv <src> <dst> [--force]` | 🚚 Move/rename files & dirs (cross-volume safe, no clobber without --force) |
 | `codex-kit cp <src> <dst> [--force]` | 📄 Copy files & dirs (recursive, no clobber without --force) |
-| `codex-kit download <url> [-o file] [--threads N] [--resume] [--force]` | ⬇️ Multi-threaded download with resume (Range-aware, graceful fallback) |
+| `codex-kit download <url> [-o file] [--threads N] [--resume] [--force] [--no-progress]` | ⬇️ Multi-threaded download with resume (Range-aware, graceful fallback); live progress on stderr (TTY bar / piped lines / JSON events) |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 Escape hatch: run code with the **system** Python |
 
 ## 🤖 Agent Integration

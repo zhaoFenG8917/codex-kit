@@ -342,6 +342,9 @@ pub enum Commands {
         /// (falls back to a single stream otherwise)
         #[arg(long, default_value_t = 4)]
         threads: usize,
+        /// Suppress progress output on stderr
+        #[arg(long)]
+        no_progress: bool,
     },
     /// Run Python code with the system interpreter (fallback escape hatch)
     Exec {

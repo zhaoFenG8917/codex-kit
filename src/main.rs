@@ -126,6 +126,7 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
             force,
             resume,
             threads,
+            no_progress,
         } => commands::download::run(
             url,
             output.as_deref(),
@@ -133,6 +134,7 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
             *force,
             *resume,
             *threads,
+            *no_progress,
             format,
         ),
         Commands::Exec { code, file } => commands::exec::run(code, *file),

@@ -1,10 +1,13 @@
 use crate::cli::Format;
 use crate::utils::output;
+use crate::utils::progress::Progress;
 use crate::utils::Result;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
-use std::io;
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// Below this size, parallel segments aren't worth the overhead.
@@ -48,6 +51,8 @@ struct PartsMeta {
 /// - Falls back to a single stream when ranges are unsupported or the file
 ///   is small. Non-2xx responses are errors; partial junk is never left as
 ///   the output file.
+/// - Progress is reported on stderr (terminal bar / piped lines / JSON
+///   events); `--no-progress` silences it.
 pub fn run(
     url: &str,
     output: Option<&Path>,
@@ -55,6 +60,7 @@ pub fn run(
     force: bool,
     resume: bool,
     threads: usize,
+    no_progress: bool,
     format: Format,
 ) -> Result<()> {
     let out_path: PathBuf = match output {
@@ -87,19 +93,22 @@ pub fn run(
     }
 
     let started = Instant::now();
+    let progress = !no_progress;
     let outcome = if existing > 0 {
         // Continue an interrupted single-stream download in place.
-        single(url, &out_path, existing, timeout)?
+        single(url, &out_path, existing, timeout, format, progress)?
     } else if threads > 1 {
         match probe(url, timeout) {
             Probe {
                 total: Some(total),
                 ranges: true,
-            } if total >= MIN_PARALLEL_SIZE => parallel(url, &out_path, total, threads, timeout)?,
-            _ => single(url, &out_path, 0, timeout)?,
+            } if total >= MIN_PARALLEL_SIZE => {
+                parallel(url, &out_path, total, threads, timeout, format, progress)?
+            }
+            _ => single(url, &out_path, 0, timeout, format, progress)?,
         }
     } else {
-        single(url, &out_path, 0, timeout)?
+        single(url, &out_path, 0, timeout, format, progress)?
     };
     let duration_ms = started.elapsed().as_millis();
 
@@ -118,15 +127,15 @@ pub fn run(
                 (true, true) => format!(
                     ", {} threads, resumed {}",
                     result.threads,
-                    human_size(result.resumed_bytes)
+                    output::human_size(result.resumed_bytes)
                 ),
                 (true, false) => format!(", {} threads", result.threads),
-                (false, true) => format!(", resumed {}", human_size(result.resumed_bytes)),
+                (false, true) => format!(", resumed {}", output::human_size(result.resumed_bytes)),
                 _ => String::new(),
             };
             println!(
                 "downloaded {} -> {} ({duration_ms} ms{extra})",
-                human_size(result.bytes),
+                output::human_size(result.bytes),
                 out_path.display()
             );
         }
@@ -171,7 +180,14 @@ fn probe(url: &str, timeout: u64) -> Probe {
     }
 }
 
-fn single(url: &str, out_path: &Path, resume_from: u64, timeout: u64) -> Result<Outcome> {
+fn single(
+    url: &str,
+    out_path: &Path,
+    resume_from: u64,
+    timeout: u64,
+    format: Format,
+    progress: bool,
+) -> Result<Outcome> {
     let mut req = agent(timeout).get(url);
     if resume_from > 0 {
         req = req.set("Range", &format!("bytes={resume_from}-"));
@@ -203,7 +219,29 @@ fn single(url: &str, out_path: &Path, resume_from: u64, timeout: u64) -> Result<
         opts.truncate(true);
     }
     let mut file = opts.open(out_path)?;
-    let written = io::copy(&mut resp.into_reader(), &mut file)?;
+    // On resume Content-Length covers only the remaining bytes.
+    let total = resp
+        .header("Content-Length")
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .map(|cl| resume_from + cl);
+    let mut progress = Progress::new(format, resume_from, progress);
+    progress.set_total(total);
+    let mut reader = resp.into_reader();
+    let mut buf = [0u8; 64 * 1024];
+    let mut written = 0u64;
+    loop {
+        let n = match reader.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => n,
+            Err(e) => return Err(format!("download failed: {e}").into()),
+        };
+        if let Err(e) = file.write_all(&buf[..n]) {
+            return Err(format!("download failed: {e}").into());
+        }
+        written += n as u64;
+        progress.add(n as u64);
+    }
+    progress.finish();
     Ok(Outcome {
         bytes: resume_from + written,
         threads: 1,
@@ -221,6 +259,8 @@ fn parallel(
     total: u64,
     threads: usize,
     timeout: u64,
+    format: Format,
+    progress_on: bool,
 ) -> Result<Outcome> {
     let dir = parts_dir(out_path);
     let meta_path = dir.join("meta.json");
@@ -243,6 +283,16 @@ fn parallel(
     )?;
 
     let seg = total.div_ceil(threads as u64);
+    // Bytes already in part files count as done, and don't count as speed.
+    let mut present = 0u64;
+    for i in 0..threads as u64 {
+        present += fs::metadata(dir.join(format!("part-{i}")))
+            .map(|m| m.len())
+            .unwrap_or(0);
+    }
+    let mut progress = Progress::new(format, present, progress_on);
+    progress.set_total(Some(total));
+    let counter = progress.counter();
     let mut handles = Vec::new();
     for i in 0..threads as u64 {
         let start = i * seg;
@@ -252,17 +302,34 @@ fn parallel(
         let end = ((i + 1) * seg).min(total) - 1;
         let part = dir.join(format!("part-{i}"));
         let url = url.to_string();
-        handles.push(std::thread::spawn(move || segment(&url, &part, start, end, timeout)));
+        let counter = Arc::clone(&counter);
+        handles.push(std::thread::spawn(move || {
+            segment(&url, &part, start, end, timeout, &counter)
+        }));
     }
     let nseg = handles.len();
 
     let mut resumed_bytes = 0u64;
     let mut failure: Option<String> = None;
-    for h in handles {
-        match h.join() {
-            Ok(Ok(resumed)) => resumed_bytes += resumed,
-            Ok(Err(e)) => failure = Some(e.to_string()),
-            Err(_) => failure = Some("segment thread panicked".into()),
+    // Poll instead of blocking joins so progress keeps rendering while the
+    // segments run.
+    while !handles.is_empty() {
+        let mut i = 0;
+        while i < handles.len() {
+            if handles[i].is_finished() {
+                let h = handles.remove(i);
+                match h.join() {
+                    Ok(Ok(resumed)) => resumed_bytes += resumed,
+                    Ok(Err(e)) => failure = Some(e),
+                    Err(_) => failure = Some("segment thread panicked".into()),
+                }
+            } else {
+                i += 1;
+            }
+        }
+        progress.maybe_draw();
+        if !handles.is_empty() {
+            std::thread::sleep(Duration::from_millis(50));
         }
     }
     if let Some(e) = failure {
@@ -288,6 +355,7 @@ fn parallel(
         return Err(format!("size mismatch after merge: {bytes} != {total}").into());
     }
     fs::remove_dir_all(&dir)?;
+    progress.finish();
     Ok(Outcome {
         bytes,
         threads: nseg,
@@ -304,6 +372,7 @@ fn segment(
     start: u64,
     end: u64,
     timeout: u64,
+    counter: &Arc<AtomicU64>,
 ) -> std::result::Result<u64, String> {
     let want = end - start + 1;
     let mut have = fs::metadata(part).map(|m| m.len()).unwrap_or(0);
@@ -331,7 +400,21 @@ fn segment(
         .append(true)
         .open(part)
         .map_err(|e| e.to_string())?;
-    let n = io::copy(&mut resp.into_reader(), &mut f).map_err(|e| e.to_string())?;
+    let mut reader = resp.into_reader();
+    let mut buf = [0u8; 64 * 1024];
+    let mut n = 0u64;
+    loop {
+        let read = match reader.read(&mut buf) {
+            Ok(0) => break,
+            Ok(read) => read,
+            Err(e) => return Err(format!("segment {start}-{end}: {e}")),
+        };
+        if let Err(e) = f.write_all(&buf[..read]) {
+            return Err(format!("segment {start}-{end}: {e}"));
+        }
+        n += read as u64;
+        counter.fetch_add(read as u64, Ordering::Relaxed);
+    }
     if have + n != want {
         return Err(format!(
             "segment {start}-{end}: incomplete ({}/{want})",
@@ -348,20 +431,5 @@ fn filename_from_url(url: &str) -> String {
         "download.bin".to_string()
     } else {
         name.to_string()
-    }
-}
-
-fn human_size(size: u64) -> String {
-    const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
-    let mut value = size as f64;
-    let mut unit = 0;
-    while value >= 1024.0 && unit < UNITS.len() - 1 {
-        value /= 1024.0;
-        unit += 1;
-    }
-    if unit == 0 {
-        format!("{size} B")
-    } else {
-        format!("{value:.1} {}", UNITS[unit])
     }
 }

@@ -91,7 +91,7 @@ sudo mv codex-kit /usr/local/bin/
 | `codex-kit restore <ids...> [--all] [--overwrite]` | ♻️ 把回收站条目还原到原路径 |
 | `codex-kit mv <src> <dst> [--force]` | 🚚 移动/重命名文件目录（跨卷安全，不加 --force 不覆盖） |
 | `codex-kit cp <src> <dst> [--force]` | 📄 复制文件/目录（递归，不加 --force 不覆盖） |
-| `codex-kit download <url> [-o file] [--threads N] [--resume] [--force]` | ⬇️ 多线程下载 + 断点续传（Range 感知，不支持时自动降级） |
+| `codex-kit download <url> [-o file] [--threads N] [--resume] [--force] [--no-progress]` | ⬇️ 多线程下载 + 断点续传（Range 感知，不支持时自动降级）；stderr 实时进度（终端进度条 / 管道行 / JSON 事件） |
 | `codex-kit exec <code>` / `-f <file.py>` | 🐍 兜底通道：调用**系统** Python 执行代码 |
 
 ## 🤖 接入 Agent

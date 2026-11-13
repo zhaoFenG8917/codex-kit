@@ -17,3 +17,20 @@ pub fn print_error(format: Format, message: &str) {
         Format::Plain => eprintln!("Error: {message}"),
     }
 }
+
+/// Human-readable byte size, e.g. "1.5 MB". Shared by download and its
+/// progress reporter so both frames agree on units.
+pub fn human_size(size: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
+    let mut value = size as f64;
+    let mut unit = 0;
+    while value >= 1024.0 && unit < UNITS.len() - 1 {
+        value /= 1024.0;
+        unit += 1;
+    }
+    if unit == 0 {
+        format!("{size} B")
+    } else {
+        format!("{value:.1} {}", UNITS[unit])
+    }
+}
