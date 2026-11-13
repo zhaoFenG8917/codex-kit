@@ -66,7 +66,7 @@ Global flag: `--format plain|json` (default: `plain`).
 |---|---|
 | `codex-kit ls [path] [-a] [-l] [--limit N]` | 📄 List directory contents (--limit keeps JSON valid when truncating) |
 | `codex-kit tree [path] [-d N] [--ignore glob]` | 🌲 Directory tree with depth limit and ignore globs |
-| `codex-kit info <path>` | 🔍 File/dir metadata (type, size, timestamps, readonly) |
+| `codex-kit info <paths...>` | 🔍 File/dir metadata (type, size, timestamps, readonly; batch queries yield an array) |
 | `codex-kit stat` | 🖥️ Probe OS, arch, hostname, PATH, python/node/git versions |
 | `codex-kit replace <file> <old> <new> [--old-file f] [--new-file f] [--dry-run] [--regex] [--no-backup]` | ✏️ Safe text replace — CRLF-insensitive, original encoding preserved, `.bak` backup by default |
 | `codex-kit patch <file> --spec spec.json [--dry-run] [--no-backup]` | 🩹 Multi-hunk guarded patch (`[{"old","new","count"}]`), all-or-nothing with per-hunk assertions |

@@ -66,9 +66,15 @@
   - `--ignore <pattern>`：忽略的 glob 模式（如 `node_modules`）。
 - **JSON 输出**：嵌套的树形 JSON 对象。
 
-### 4.3 `info <path>`
-- **功能**：获取文件/目录的详细元信息。
-- **JSON 输出**：包含 `path`, `exists`, `type`, `size_bytes`, `created`, `modified`, `readonly` 等字段。
+### 4.3 `info <paths...>`
+- **功能**：获取文件/目录的详细元信息，支持一次查询多个路径。
+- **参数**：`<paths...>`：一个或多个目标路径（至少提供一个）。
+- **JSON 输出**：单路径输出单个对象（保持历史形状），多路径输出对象数组；字段包含 `path`, `exists`, `type`, `size_bytes`, `entries`, `target`, `mode`（仅 Unix）, `created`, `modified`, `readonly`。
+  - `size_bytes`：仅文件与符号链接有意义；目录为 `null`（目录长度是平台产物，Windows 上恒为 0，不构成"大小"）。
+  - `entries`：仅目录有值，为目录条目数（尽力而为，无权读取时为 `null`）。
+  - `target`：仅符号链接有值，为链接目标路径。
+  - `mode`：仅 Unix 输出，八进制权限位（如 `"644"`）；Windows 不输出该字段。
+- **行为**：路径不存在时输出 `exists: false` 且退出码为 0（探针语义，不报错）；批查询中缺失路径不影响其他路径，混合存在/缺失同样退出 0。
 
 ### 4.4 `stat`
 - **功能**：探测当前系统环境信息，帮助 LLM 了解运行上下文。
@@ -327,7 +333,7 @@ codegen-units = 1
 3. **目录与文件操作**：使用 `codex-kit` 命令：
    - 列表：`codex-kit ls [path]`
    - 树状图：`codex-kit tree [path]`
-   - 元信息：`codex-kit info <path>`
+   - 元信息：`codex-kit info <paths...>`（支持批量查询，单路径输出对象、多路径输出数组）
    - 环境探测：`codex-kit stat`
    - 文本替换：`codex-kit replace <file> <old> <new> [--dry-run]`
    - 文件头尾：`codex-kit head/tail <file>`

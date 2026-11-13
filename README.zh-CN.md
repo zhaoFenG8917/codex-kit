@@ -66,7 +66,7 @@ sudo mv codex-kit /usr/local/bin/
 |---|---|
 | `codex-kit ls [path] [-a] [-l] [--limit N]` | 📄 列出目录内容（--limit 截断时 JSON 依然合法） |
 | `codex-kit tree [path] [-d N] [--ignore glob]` | 🌲 目录树，支持深度限制和忽略规则 |
-| `codex-kit info <path>` | 🔍 文件/目录元信息（类型、大小、时间戳、只读属性） |
+| `codex-kit info <paths...>` | 🔍 文件/目录元信息（类型、大小、时间戳、只读属性；多路径批量查询输出数组） |
 | `codex-kit stat` | 🖥️ 探测系统环境（OS、架构、PATH、python/node/git 版本） |
 | `codex-kit replace <file> <old> <new> [--old-file f] [--new-file f] [--dry-run] [--regex] [--no-backup]` | ✏️ 安全文本替换——CRLF 容错、保持原编码，默认生成 `.bak` 备份 |
 | `codex-kit patch <file> --spec spec.json [--dry-run] [--no-backup]` | 🩹 多块守卫补丁（`[{"old","new","count"}]`），逐块断言、要么全改要么不改 |

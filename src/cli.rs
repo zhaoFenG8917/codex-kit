@@ -49,10 +49,11 @@ pub enum Commands {
         #[arg(long)]
         ignore: Vec<String>,
     },
-    /// Show detailed metadata of a file or directory
+    /// Show detailed metadata of files or directories
     Info {
-        /// Target path
-        path: PathBuf,
+        /// Target paths (a single path yields one object, several yield an array)
+        #[arg(required = true)]
+        paths: Vec<PathBuf>,
     },
     /// Probe system environment (OS, tools, versions)
     Stat,

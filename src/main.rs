@@ -25,7 +25,7 @@ fn dispatch(cmd: &Commands, format: Format) -> utils::Result<()> {
         Commands::Tree { path, depth, ignore } => {
             commands::tree::run(path.as_deref(), *depth, ignore, format)
         }
-        Commands::Info { path } => commands::info::run(path, format),
+        Commands::Info { paths } => commands::info::run(paths, format),
         Commands::Stat => commands::stat::run(format),
         Commands::Replace {
             file,
